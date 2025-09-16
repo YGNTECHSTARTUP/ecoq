@@ -9,21 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import Link from 'next/link';
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!email || !password) {
+     if (!email || !password) {
         toast({
             variant: 'destructive',
             title: 'Error',
@@ -32,23 +32,23 @@ export default function SignInPage() {
         setLoading(false);
         return;
     }
-
+    
     try {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({
-            title: 'Success!',
-            description: "You've been signed in.",
-        });
-        router.push('/onboarding/profile');
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Account Created!',
+        description: "You've been successfully signed up.",
+      });
+      router.push('/onboarding/profile');
     } catch (error: any) {
-        console.error('Sign in error:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: error.message || 'Failed to sign in. Please check your credentials.',
-        });
+      console.error('Sign up error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to sign up. Please try again.',
+      });
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -63,11 +63,11 @@ export default function SignInPage() {
         </div>
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome to EcoQuest</CardTitle>
-            <CardDescription>Sign in to continue your energy-saving journey.</CardDescription>
+            <CardTitle className="text-2xl">Create an Account</CardTitle>
+            <CardDescription>Join the EcoQuest to start saving energy.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -90,15 +90,15 @@ export default function SignInPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <Loader2 className="animate-spin" /> : 'Sign In'}
+                {loading ? <Loader2 className="animate-spin" /> : 'Sign Up'}
               </Button>
             </form>
           </CardContent>
         </Card>
          <p className="px-8 text-center text-sm text-muted-foreground mt-4">
-            Don't have an account?{' '}
-            <Link href="/signup" className="underline underline-offset-4 hover:text-primary">
-              Sign Up
+            Already have an account?{' '}
+            <Link href="/" className="underline underline-offset-4 hover:text-primary">
+              Sign In
             </Link>
           </p>
       </div>
