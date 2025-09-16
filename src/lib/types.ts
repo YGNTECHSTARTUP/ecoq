@@ -52,3 +52,5 @@ export interface Overview {
     moneySaved: number;
     questsCompleted: number;
 }
+
+export type SimulationScenario = 'normal' | 'morning_peak' | 'evening_peak' | 'night_low';

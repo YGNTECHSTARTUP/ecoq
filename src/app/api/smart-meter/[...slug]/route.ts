@@ -9,16 +9,17 @@ const db = {
 };
 
 // Utility Functions
-const generateRealisticData = (meterId: string, brand: string, hour = new Date().getUTCHours() + 5.5) => { // IST approximation
+const generateRealisticData = (meterId: string, brand: string, hour?: number) => { 
+  const currentHour = hour === undefined ? new Date().getUTCHours() + 5.5 : hour; // IST approximation
   let baseLoad = 2.5; // kW
   let multiplier = 1.0;
 
-  if (hour >= 6 && hour <= 9) multiplier = 1.4;
-  if (hour >= 12 && hour <= 14) multiplier = 1.2;
-  if (hour >= 19 && hour <= 22) multiplier = 1.7;
-  if (hour >= 23 || hour <= 5) multiplier = 0.3;
+  if (currentHour >= 6 && currentHour <= 9) multiplier = 1.4;
+  if (currentHour >= 12 && currentHour <= 14) multiplier = 1.2;
+  if (currentHour >= 19 && currentHour <= 22) multiplier = 1.7;
+  if (currentHour >= 23 || currentHour <= 5) multiplier = 0.3;
 
-  const isWeekend = [0, 6].includes(new Date().getDay());
+  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
   if (isWeekend) multiplier *= 0.85;
 
   const activePower = (baseLoad * multiplier) + (Math.random() - 0.5) * 0.8;
@@ -47,33 +48,35 @@ const validateApiKey = (apiKey: string | null, expectedFormat: string) => {
   return apiKey.includes(expectedFormat);
 };
 
-const isPeakHour = () => {
-  const hour = new Date().getUTCHours() + 5.5;
-  return hour >= 19 && hour <= 22;
+const isPeakHour = (hour?: number) => {
+  const currentHour = hour === undefined ? new Date().getUTCHours() + 5.5 : hour;
+  return currentHour >= 19 && currentHour <= 22;
 };
 
 
 async function handler(req: NextRequest, { params }: { params: { slug: string[] }}) {
     const slug = params.slug.join('/');
+    const { searchParams } = new URL(req.url);
+    const hour = searchParams.has('hour') ? Number(searchParams.get('hour')) : undefined;
 
     if (slug === 'qubeRealTimeData') {
-        return qubeRealTimeData(req);
+        return qubeRealTimeData(req, hour);
     }
     if (slug === 'secureMetersData') {
-        return secureMetersData(req);
+        return secureMetersData(req, hour);
     }
     if (slug === 'lntMeterApi') {
-        return lntMeterApi(req);
+        return lntMeterApi(req, hour);
     }
     if (slug === 'unifiedMeterGateway') {
-        return unifiedMeterGateway(req);
+        return unifiedMeterGateway(req, hour);
     }
     
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
 }
 
 // QUBE API
-async function qubeRealTimeData(req: NextRequest) {
+async function qubeRealTimeData(req: NextRequest, hour?: number) {
     const { searchParams } = new URL(req.url);
     const meterId = searchParams.get('meterId');
     const apiKey = searchParams.get('apiKey');
@@ -85,10 +88,10 @@ async function qubeRealTimeData(req: NextRequest) {
         return NextResponse.json({ status: 'error', error: 'Invalid API key', code: 'INVALID_API_KEY' }, { status: 401 });
     }
 
-    const data = generateRealisticData(meterId, 'QUBE');
-    const currentHour = new Date().getUTCHours() + 5.5;
+    const data = generateRealisticData(meterId, 'QUBE', hour);
+    const currentHour = hour === undefined ? new Date().getUTCHours() + 5.5 : hour;
     const energyToday = 2.5 + (currentHour * 0.8) + Math.random() * 2;
-    const costToday = calculateCost(energyToday, 5.2, isPeakHour());
+    const costToday = calculateCost(energyToday, 5.2, isPeakHour(hour));
 
     const response = {
         status: 'success',
@@ -99,7 +102,7 @@ async function qubeRealTimeData(req: NextRequest) {
         data: {
           instantaneous: { active_power: Math.round(data.activePower * 100) / 100 },
           energy: { active_energy_today: Math.round(energyToday * 100) / 100, },
-          billing: { cost_today: Math.round(costToday * 100) / 100, tariff_rate: 5.2, is_peak_hour: isPeakHour(), },
+          billing: { cost_today: Math.round(costToday * 100) / 100, tariff_rate: 5.2, is_peak_hour: isPeakHour(hour), },
           status: { connection_quality: 'excellent', tamper_status: 'normal',},
         },
         metadata: { api_version: 'qube_v2.1', response_time_ms: 50, data_freshness: 'real_time'}
@@ -108,7 +111,7 @@ async function qubeRealTimeData(req: NextRequest) {
 }
 
 // SECURE METERS API
-async function secureMetersData(req: NextRequest) {
+async function secureMetersData(req: NextRequest, hour?: number) {
     const { searchParams } = new URL(req.url);
     const deviceId = searchParams.get('deviceId');
     const dataType = searchParams.get('dataType');
@@ -122,7 +125,7 @@ async function secureMetersData(req: NextRequest) {
     }
 
     if (dataType === 'current' || !dataType) {
-        const data = generateRealisticData(deviceId, 'SECURE');
+        const data = generateRealisticData(deviceId, 'SECURE', hour);
         const response = {
           success: true,
           timestamp: new Date().toISOString(),
@@ -139,18 +142,18 @@ async function secureMetersData(req: NextRequest) {
         const readings = [];
         let totalEnergy = 0;
         let peakDemand = 0;
-        for (let hour = 0; hour < 24; hour++) {
-          const hourData = generateRealisticData(deviceId, 'SECURE', hour);
+        for (let h = 0; h < 24; h++) {
+          const hourData = generateRealisticData(deviceId, 'SECURE', h);
           const energy = hourData.activePower * 1;
           totalEnergy += energy;
           peakDemand = Math.max(peakDemand, hourData.activePower);
           const timestamp = new Date();
-          timestamp.setHours(timestamp.getHours() - (23 - hour), 0, 0, 0);
+          timestamp.setHours(timestamp.getHours() - (23 - h), 0, 0, 0);
           readings.push({
             timestamp: timestamp.toISOString(),
             energy_kwh: Math.round(energy * 100) / 100,
             power_kw: Math.round(hourData.activePower * 100) / 100,
-            cost_inr: Math.round(calculateCost(energy, 5.8, hour >= 19 && hour <= 22) * 100) / 100,
+            cost_inr: Math.round(calculateCost(energy, 5.8, h >= 19 && h <= 22) * 100) / 100,
           });
         }
         const response = {
@@ -171,7 +174,7 @@ async function secureMetersData(req: NextRequest) {
 }
 
 // L&T API
-async function lntMeterApi(req: NextRequest) {
+async function lntMeterApi(req: NextRequest, hour?: number) {
     const { searchParams } = new URL(req.url);
     const meterId = searchParams.get('meterId');
     const apiFunction = searchParams.get('function');
@@ -184,7 +187,7 @@ async function lntMeterApi(req: NextRequest) {
         return NextResponse.json({ status: 'error', error: 'Meter ID is required', code: 'MISSING_METER_ID' }, { status: 400 });
     }
     if (apiFunction === 'read') {
-        const data = generateRealisticData(meterId, 'LNT');
+        const data = generateRealisticData(meterId, 'LNT', hour);
         const response = {
             status: 'success',
             meter_id: meterId,
@@ -200,7 +203,7 @@ async function lntMeterApi(req: NextRequest) {
 }
 
 // UNIFIED GATEWAY API
-async function unifiedMeterGateway(req: NextRequest) {
+async function unifiedMeterGateway(req: NextRequest, hour?: number) {
     const { searchParams } = new URL(req.url);
     const meterId = searchParams.get('meterId');
     const brand = searchParams.get('brand');
@@ -218,7 +221,7 @@ async function unifiedMeterGateway(req: NextRequest) {
         return NextResponse.json({ success: false, error: `Unsupported meter brand: ${brand}` }, { status: 400 });
     }
 
-    const data = generateRealisticData(meterId, brand.toUpperCase());
+    const data = generateRealisticData(meterId, brand.toUpperCase(), hour);
     const normalizedData = {
         power: { active_kw: Math.round(data.activePower * 100) / 100, },
         electrical: { voltage_v: Math.round(data.voltage * 10) / 10, current_a: Math.round(data.current * 100) / 100, },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview } from '@/lib/types';
+import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, SimulationScenario } from '@/lib/types';
 import { questTemplates, badges as badgeTemplates } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -35,13 +35,26 @@ export const useSimulatedData = () => {
   });
   const [energyUsage, setEnergyUsage] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [simulationScenario, setSimulationScenario] = useState<SimulationScenario>('normal');
+  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const scenarioToHour: Record<SimulationScenario, number | undefined> = {
+    normal: undefined,
+    morning_peak: 8,
+    evening_peak: 20,
+    night_low: 2,
+  };
+
+  const fetchData = useCallback(async (scenario: SimulationScenario = 'normal') => {
+    setLoading(true);
     try {
+      const hour = scenarioToHour[scenario];
+      const hourParam = hour !== undefined ? `&hour=${hour}` : '';
+
       // Fetch data from unified gateway which gives normalized data
-      const qubePromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=QUBE_001&brand=QUBE&userId=user123');
-      const securePromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=SEC_002&brand=SECURE&userId=user123');
-      const lntPromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=LNT_003&brand=LNT&userId=user123');
+      const qubePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=QUBE_001&brand=QUBE&userId=user123${hourParam}`);
+      const securePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=SEC_002&brand=SECURE&userId=user123${hourParam}`);
+      const lntPromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=LNT_003&brand=LNT&userId=user123${hourParam}`);
 
       const [qubeRes, secureRes, lntRes] = await Promise.all([qubePromise, securePromise, lntPromise]);
 
@@ -114,6 +127,17 @@ export const useSimulatedData = () => {
     }
   }, []);
 
+  const handleScenarioChange = (scenario: SimulationScenario) => {
+    setSimulationScenario(scenario);
+    fetchData(scenario); // Fetch immediately on change
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+    }
+    // Restart interval with new scenario
+    const newInterval = setInterval(() => fetchData(scenario), 10000);
+    setSimulationInterval(newInterval);
+  };
+
 
   useEffect(() => {
     fetchData(); // Initial fetch
@@ -157,9 +181,13 @@ export const useSimulatedData = () => {
     };
     setBadges(generateBadges());
 
-    const interval = setInterval(fetchData, 10000); // Re-fetch every 10 seconds
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    const newInterval = setInterval(fetchData, 10000); // Re-fetch every 10 seconds
+    setSimulationInterval(newInterval);
+    return () => {
+      if (newInterval) clearInterval(newInterval);
+      if (simulationInterval) clearInterval(simulationInterval);
+    };
+  }, []);
 
-  return { smartDevices, quests, leaderboard, badges, overview, energyUsage, loading };
+  return { smartDevices, quests, leaderboard, badges, overview, energyUsage, loading, handleScenarioChange };
 };

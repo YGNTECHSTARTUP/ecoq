@@ -6,6 +6,7 @@ import { Leaderboard } from '@/components/dashboard/leaderboard';
 import { BadgesGallery } from '@/components/dashboard/badges-gallery';
 import { SmartHomeControls } from '@/components/dashboard/smart-home-controls';
 import { AiTipGenerator } from '@/components/dashboard/ai-tip-generator';
+import { SimulationControls } from '@/components/dashboard/simulation-controls';
 
 export default function DashboardPage() {
   return (
@@ -33,6 +34,7 @@ export default function DashboardPage() {
            <div className="col-span-4 space-y-4">
               <BadgesGallery />
               <SmartHomeControls />
+              <SimulationControls />
           </div>
         </div>
       </main>
