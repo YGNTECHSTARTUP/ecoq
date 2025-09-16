@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-avatar-1",
+      "description": "User Avatar 1",
+      "imageUrl": "https://picsum.photos/seed/avatar1/100/100",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "user-avatar-2",
+      "description": "User Avatar 2",
+      "imageUrl": "https://picsum.photos/seed/avatar2/100/100",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "user-avatar-3",
+      "description": "User Avatar 3",
+      "imageUrl": "https://picsum.photos/seed/avatar3/100/100",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "user-avatar-4",
+      "description": "User Avatar 4",
+      "imageUrl": "https://picsum.photos/seed/avatar4/100/100",
+      "imageHint": "man glasses"
+    },
+    {
+      "id": "user-avatar-5",
+      "description": "User Avatar 5",
+      "imageUrl": "https://picsum.photos/seed/avatar5/100/100",
+      "imageHint": "person happy"
+    }
+  ]
 }
