@@ -12,13 +12,17 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
       if (response.ok) {
         return response.json();
       }
-      console.error(`API call failed with status: ${response.status}`);
+      console.error(`API call failed with status: ${response.status} for ${url}`);
     } catch (error) {
-      console.error(`API call failed with error:`, error);
+      console.error(`API call failed with error for ${url}:`, error);
     }
-    await new Promise(res => setTimeout(res, delay));
+    if (i < retries - 1) {
+       await new Promise(res => setTimeout(res, delay));
+    }
   }
-  throw new Error(`Failed to fetch from ${url} after ${retries} retries.`);
+  // Return null instead of throwing an error to allow for graceful fallbacks
+  console.error(`Failed to fetch from ${url} after ${retries} retries.`);
+  return null;
 }
 
 
@@ -43,6 +47,27 @@ export const useSimulatedData = () => {
     morning_peak: 8,
     evening_peak: 20,
     night_low: 2,
+  };
+
+  const generateSimulatedChartData = () => {
+    const data = [];
+    const now = new Date();
+    for (let i = 23; i >= 0; i--) {
+        const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+        let usage = 1.5 + Math.random(); // base usage
+        const h = hour.getHours();
+
+        // Simulate peaks
+        if (h >= 6 && h <= 9) usage *= 1.4;
+        if (h >= 18 && h <= 21) usage *= 1.7;
+        if (h >= 0 && h <= 5) usage *= 0.4;
+        
+        data.push({
+            name: hour.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+            usage: parseFloat(usage.toFixed(2)),
+        });
+    }
+    return data;
   };
 
   const fetchData = useCallback(async (scenario: SimulationScenario = 'normal') => {
@@ -103,14 +128,25 @@ export const useSimulatedData = () => {
       
       // Fetch historical data for chart
       const historicalRes = await fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical');
-      const chartData = historicalRes.readings.map((reading: any) => ({
-        name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
-        usage: reading.energy_kwh,
-      }));
-      setEnergyUsage(chartData);
       
-      const totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5-curr.usage : 0), 0)
-      const moneySaved = historicalRes.summary.total_cost_inr;
+      let chartData;
+      let totalKwhSaved = 0;
+      let moneySaved = 0;
+
+      if (historicalRes && historicalRes.readings) {
+          chartData = historicalRes.readings.map((reading: any) => ({
+            name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+            usage: reading.energy_kwh,
+          }));
+          totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5 - curr.usage : 0), 0);
+          moneySaved = historicalRes.summary.total_cost_inr;
+      } else {
+          console.log("Falling back to simulated chart data.");
+          chartData = generateSimulatedChartData();
+          totalKwhSaved = chartData.reduce((acc, curr) => acc + Math.max(0, 1.8 - curr.usage), 0);
+          moneySaved = totalKwhSaved * 5.5; // Approximate cost
+      }
+      setEnergyUsage(chartData);
 
       // Other data can remain client-side simulated for now
       setOverview({
