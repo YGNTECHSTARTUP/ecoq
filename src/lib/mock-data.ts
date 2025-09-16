@@ -1,4 +1,4 @@
-import type { Badge, Quest } from './types';
+import type { Badge, Quest, SmartMeterBrand } from './types';
 import { Leaf, Zap, Sun, Users, Megaphone, Home, Search, Target, Clock, Calendar } from 'lucide-react';
 
 export const badges: Omit<Badge, 'unlocked'>[] = [
@@ -36,4 +36,15 @@ export const questTemplates: Omit<Quest, 'id' | 'progress' | 'target' | 'unit' |
       type: 'daily',
       icon: Sun,
     },
+];
+
+export const smartMeterBrands: SmartMeterBrand[] = [
+    { name: 'Qube', logoUrl: 'https://picsum.photos/seed/qube/200/120' },
+    { name: 'Secure', logoUrl: 'https://picsum.photos/seed/secure/200/120' },
+    { name: 'L&T', logoUrl: 'https://picsum.photos/seed/lnt/200/120' },
+    { name: 'Genus', logoUrl: 'https://picsum.photos/seed/genus/200/120' },
+    { name: 'HPL', logoUrl: 'https://picsum.photos/seed/hpl/200/120' },
+    { name: 'Tata Power', logoUrl: 'https://picsum.photos/seed/tata/200/120' },
+    { name: 'Adani', logoUrl: 'https://picsum.photos/seed/adani/200/120' },
+    { name: 'BSES', logoUrl: 'https://picsum.photos/seed/bses/200/120' },
 ];

@@ -38,3 +38,8 @@ export interface LeaderboardUser {
   points: number;
   change: number;
 }
+
+export interface SmartMeterBrand {
+  name: string;
+  logoUrl: string;
+}
