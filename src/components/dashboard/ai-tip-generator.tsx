@@ -23,14 +23,13 @@ export function AiTipGenerator() {
       const currentQuests = quests.map(q => `${q.title} (Progress: ${q.progress}/${q.target} ${q.unit})`).join(', ');
       const deviceStatus = smartDevices.map(d => `${d.location} (${d.type}): ${d.currentUsage}kW`).join('; ');
 
-      const mockInput: EnergySavingTipInput = {
+      const input: EnergySavingTipInput = {
         realTimeData,
         currentQuests,
-        weatherConditions: 'Simulated: Temperature: 32°C, Humidity: 75%, Sunny.',
         deviceStatus,
       };
 
-      const result = await generateEnergySavingTip(mockInput);
+      const result = await generateEnergySavingTip(input);
       setTip(result.tip);
     } catch (error) {
       console.error('Failed to generate tip:', error);
