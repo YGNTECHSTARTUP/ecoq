@@ -7,15 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { User, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { User, Home, Loader2, Zap } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 
 const steps = [
@@ -38,7 +40,9 @@ const steps = [
 
 export default function ProfileOnboardingPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     householdSize: '',
@@ -47,12 +51,54 @@ export default function ProfileOnboardingPage() {
     savingGoal: '',
   });
 
-  const handleNext = () => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({...prev, [id]: value}));
+  }
+
+  const handleSelectChange = (id: string) => (value: string) => {
+     setFormData(prev => ({...prev, [id]: value}));
+  }
+
+  const handleNext = async () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      // Navigate to the next part of onboarding
-      router.push('/onboarding');
+      // Final step, save to firestore
+      setLoading(true);
+      const user = auth.currentUser;
+      if (!user) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'You must be logged in to save your profile.',
+        });
+        setLoading(false);
+        router.push('/');
+        return;
+      }
+
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          ...formData,
+          email: user.email,
+          createdAt: new Date().toISOString(),
+        });
+        toast({
+          title: 'Profile Saved!',
+          description: "Your profile has been created successfully.",
+        });
+        router.push('/onboarding');
+      } catch(error: any) {
+        console.error("Error saving profile: ", error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save your profile. Please try again.',
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -86,14 +132,14 @@ export default function ProfileOnboardingPage() {
                                 <Label htmlFor="name">Full Name</Label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input id="name" placeholder="John Doe" className="pl-10" />
+                                    <Input id="name" placeholder="John Doe" className="pl-10" value={formData.name} onChange={handleChange} />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="householdSize">Household Size</Label>
                                 <div className="relative">
                                      <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input id="householdSize" type="number" placeholder="e.g., 4" className="pl-10" />
+                                    <Input id="householdSize" type="number" placeholder="e.g., 4" className="pl-10" value={formData.householdSize} onChange={handleChange} />
                                 </div>
                             </div>
                         </>
@@ -102,7 +148,7 @@ export default function ProfileOnboardingPage() {
                          <>
                             <div className="space-y-2">
                                 <Label htmlFor="homeType">Home Type</Label>
-                                 <Select>
+                                 <Select onValueChange={handleSelectChange('homeType')} value={formData.homeType}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select home type" />
                                     </SelectTrigger>
@@ -115,14 +161,14 @@ export default function ProfileOnboardingPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="homeSize">Approximate Home Size (sq. ft.)</Label>
-                                <Input id="homeSize" type="number" placeholder="e.g., 1200" />
+                                <Input id="homeSize" type="number" placeholder="e.g., 1200" value={formData.homeSize} onChange={handleChange} />
                             </div>
                         </>
                     )}
                      {step === 2 && (
                          <div className="space-y-2">
                             <Label htmlFor="savingGoal">Monthly Saving Goal</Label>
-                            <Select>
+                            <Select onValueChange={handleSelectChange('savingGoal')} value={formData.savingGoal}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select your goal" />
                                 </SelectTrigger>
@@ -140,11 +186,11 @@ export default function ProfileOnboardingPage() {
         </Card>
 
         <div className="mt-8 flex justify-between">
-          <Button variant="outline" onClick={handleBack} disabled={step === 0}>
+          <Button variant="outline" onClick={handleBack} disabled={step === 0 || loading}>
             Back
           </Button>
-          <Button onClick={handleNext}>
-            {step === steps.length - 1 ? 'Finish & Connect Meter' : 'Next'}
+          <Button onClick={handleNext} disabled={loading}>
+            {loading ? <Loader2 className="animate-spin" /> : (step === steps.length - 1 ? 'Finish & Connect Meter' : 'Next')}
           </Button>
         </div>
       </div>
