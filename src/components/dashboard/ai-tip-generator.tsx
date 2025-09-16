@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 export function AiTipGenerator() {
   const [tip, setTip] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { smartDevices, quests } = useSimulatedData();
+  const { smartDevices, quests, loading: dataLoading } = useSimulatedData();
   const { toast } = useToast();
 
   const handleGenerateTip = async () => {
@@ -50,7 +50,7 @@ export function AiTipGenerator() {
         <CardDescription>Get a personalized energy-saving tip from our AI.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button onClick={handleGenerateTip} disabled={loading} className="w-full">
+        <Button onClick={handleGenerateTip} disabled={loading || dataLoading} className="w-full">
           {loading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

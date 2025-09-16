@@ -1,70 +1,124 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { SmartMeterDevice, Quest, LeaderboardUser, Badge } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview } from '@/lib/types';
 import { questTemplates, badges as badgeTemplates } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        return response.json();
+      }
+      console.error(`API call failed with status: ${response.status}`);
+    } catch (error) {
+      console.error(`API call failed with error:`, error);
+    }
+    await new Promise(res => setTimeout(res, delay));
+  }
+  throw new Error(`Failed to fetch from ${url} after ${retries} retries.`);
+}
+
 
 export const useSimulatedData = () => {
   const [smartDevices, setSmartDevices] = useState<SmartMeterDevice[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
-  const [overview, setOverview] = useState({
+  const [overview, setOverview] = useState<Overview>({
     wattsPoints: 0,
     kwhSaved: 0,
     moneySaved: 0,
     questsCompleted: 0,
   });
   const [energyUsage, setEnergyUsage] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      // Fetch data from unified gateway which gives normalized data
+      const qubePromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=QUBE_001&brand=QUBE&userId=user123');
+      const securePromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=SEC_002&brand=SECURE&userId=user123');
+      const lntPromise = fetchWithRetry('/api/smart-meter/unifiedMeterGateway?meterId=LNT_003&brand=LNT&userId=user123');
+
+      const [qubeRes, secureRes, lntRes] = await Promise.all([qubePromise, securePromise, lntPromise]);
+
+      const devices: SmartMeterDevice[] = [
+        {
+          id: qubeRes.meter_info.id,
+          brand: 'Qube',
+          type: 'main_meter',
+          location: 'Main House',
+          currentUsage: qubeRes.data.power.active_kw,
+          isOnline: qubeRes.data.status.connection === 'online',
+          lastReading: new Date(qubeRes.data.status.last_reading),
+        },
+        {
+          id: secureRes.meter_info.id,
+          brand: 'Secure',
+          type: 'ac_meter',
+          location: 'Living Room AC',
+          currentUsage: secureRes.data.power.active_kw,
+          isOnline: secureRes.data.status.connection === 'online',
+          lastReading: new Date(secureRes.data.status.last_reading),
+          temperature: Number((Math.random() * 5 + 22).toFixed(1)), // Keep some client-side simulation for UI variety
+        },
+        {
+          id: lntRes.meter_info.id,
+          brand: 'L&T',
+          type: 'outlet',
+          location: 'TV Outlet',
+          currentUsage: lntRes.data.power.active_kw,
+          isOnline: lntRes.data.status.connection === 'online',
+          lastReading: new Date(lntRes.data.status.last_reading),
+          status: lntRes.data.power.active_kw > 0.01 ? 'on' : 'off',
+        },
+         {
+            id: 'hue_lights',
+            brand: 'Philips Hue',
+            type: 'light',
+            location: 'Bedroom Lights',
+            currentUsage: Number((Math.random() * 0.1).toFixed(2)),
+            isOnline: true,
+            status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
+            lastReading: new Date(),
+        },
+      ];
+      setSmartDevices(devices);
+      
+      // Fetch historical data for chart
+      const historicalRes = await fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical');
+      const chartData = historicalRes.readings.map((reading: any) => ({
+        name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+        usage: reading.energy_kwh,
+      }));
+      setEnergyUsage(chartData);
+      
+      const totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5-curr.usage : 0), 0)
+      const moneySaved = historicalRes.summary.total_cost_inr;
+
+      // Other data can remain client-side simulated for now
+      setOverview({
+        wattsPoints: Math.floor(12500 + Math.random() * 1000),
+        kwhSaved: Number(totalKwhSaved.toFixed(1)),
+        moneySaved: Number(moneySaved.toFixed(2)),
+        questsCompleted: Math.floor(12 + Math.random() * 5),
+      });
+
+    } catch (error) {
+      console.error("Failed to fetch simulated data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
 
   useEffect(() => {
-    // === Smart Devices ===
-    const simulateDevices = (): SmartMeterDevice[] => [
-      {
-        id: 'qube_main',
-        brand: 'Qube',
-        type: 'main_meter',
-        location: 'Main House',
-        currentUsage: Number((Math.random() * 5 + 2).toFixed(2)),
-        isOnline: true,
-        lastReading: new Date(),
-      },
-      {
-        id: 'secure_ac',
-        brand: 'Secure',
-        type: 'ac_meter',
-        location: 'Living Room AC',
-        currentUsage: Number((Math.random() * 2.5 + 0.5).toFixed(2)),
-        temperature: Number((Math.random() * 5 + 22).toFixed(1)),
-        isOnline: true,
-        lastReading: new Date(),
-      },
-       {
-        id: 'tplink_tv',
-        brand: 'TP-Link',
-        type: 'outlet',
-        location: 'TV Outlet',
-        currentUsage: Number((Math.random() * 0.5).toFixed(2)),
-        isOnline: true,
-        status: Math.random() > 0.5 ? 'on' : 'off',
-        lastReading: new Date(),
-      },
-      {
-        id: 'hue_lights',
-        brand: 'Philips Hue',
-        type: 'light',
-        location: 'Bedroom Lights',
-        currentUsage: Number((Math.random() * 0.1).toFixed(2)),
-        isOnline: true,
-        status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
-        lastReading: new Date(),
-      },
-    ];
-    setSmartDevices(simulateDevices());
-    const interval = setInterval(() => setSmartDevices(simulateDevices()), 5000);
-
-    // === Quests ===
+    fetchData(); // Initial fetch
+    
+    // Static data (can be fetched once)
     const generateQuests = (): Quest[] => {
       return questTemplates.map((template, index) => {
         const progress = Math.random();
@@ -83,7 +137,6 @@ export const useSimulatedData = () => {
     };
     setQuests(generateQuests());
     
-    // === Leaderboard ===
     const users = ['You', 'Alex', 'Maria', 'Chen', 'Sarah'];
     const generateLeaderboard = (): LeaderboardUser[] => {
         return users.map((name, index) => ({
@@ -96,7 +149,6 @@ export const useSimulatedData = () => {
     };
     setLeaderboard(generateLeaderboard());
 
-    // === Badges ===
     const generateBadges = (): Badge[] => {
         return badgeTemplates.map(b => ({
             ...b,
@@ -105,32 +157,9 @@ export const useSimulatedData = () => {
     };
     setBadges(generateBadges());
 
-    // === Overview ===
-    setOverview({
-        wattsPoints: Math.floor(12500 + Math.random() * 1000),
-        kwhSaved: Number((85.3 + Math.random() * 10).toFixed(1)),
-        moneySaved: Number((426.5 + Math.random() * 50).toFixed(2)),
-        questsCompleted: Math.floor(12 + Math.random() * 5),
-    });
-
-    // === Energy Usage Chart Data ===
-    const generateChartData = () => {
-        const data = [];
-        const now = new Date();
-        for (let i = 23; i >= 0; i--) {
-            const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-            data.push({
-                name: `${time.getHours()}:00`,
-                usage: Number((Math.random() * 4 + 1).toFixed(2)), // Random usage between 1 and 5 kWh
-            });
-        }
-        return data;
-    }
-    setEnergyUsage(generateChartData());
-
-
+    const interval = setInterval(fetchData, 10000); // Re-fetch every 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
-  return { smartDevices, quests, leaderboard, badges, overview, energyUsage };
+  return { smartDevices, quests, leaderboard, badges, overview, energyUsage, loading };
 };

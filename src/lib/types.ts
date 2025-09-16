@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 export interface SmartMeterDevice {
   id: string;
   brand: 'Qube' | 'Secure' | 'L&T' | 'Genus' | 'HPL' | 'Xiaomi' | 'Philips Hue' | 'TP-Link';
@@ -42,4 +44,11 @@ export interface LeaderboardUser {
 export interface SmartMeterBrand {
   name: string;
   logoUrl: string;
+}
+
+export interface Overview {
+    wattsPoints: number;
+    kwhSaved: number;
+    moneySaved: number;
+    questsCompleted: number;
 }

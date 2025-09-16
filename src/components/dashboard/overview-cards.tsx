@@ -2,9 +2,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gem, Zap, CheckCircle, Wallet } from 'lucide-react';
 import { useSimulatedData } from '@/hooks/use-simulated-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function OverviewCards() {
-  const { overview } = useSimulatedData();
+  const { overview, loading } = useSimulatedData();
 
   const cards = [
     {
@@ -42,7 +43,11 @@ export function OverviewCards() {
             <card.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{card.value}</div>
+             {loading ? (
+              <Skeleton className="h-8 w-3/4" />
+            ) : (
+              <div className="text-2xl font-bold">{card.value}</div>
+            )}
             <p className="text-xs text-muted-foreground">{card.description}</p>
           </CardContent>
         </Card>

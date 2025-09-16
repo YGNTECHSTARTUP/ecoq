@@ -5,13 +5,39 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { useSimulatedData } from '@/hooks/use-simulated-data';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '../ui/skeleton';
 
 export function SmartHomeControls() {
-  const { smartDevices } = useSimulatedData();
+  const { smartDevices, loading } = useSimulatedData();
 
   const ac = smartDevices.find(d => d.type === 'ac_meter');
   const lights = smartDevices.find(d => d.type === 'light');
   const tvOutlet = smartDevices.find(d => d.type === 'outlet');
+
+  if (loading) {
+      return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Smart Home Controls</CardTitle>
+                <CardDescription>Manage your connected devices.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Skeleton className="h-6 w-1/2" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+                <Separator/>
+                <div className="space-y-2">
+                    <Skeleton className="h-6 w-1/2" />
+                </div>
+                 <Separator/>
+                <div className="space-y-2">
+                    <Skeleton className="h-6 w-1/2" />
+                </div>
+            </CardContent>
+        </Card>
+      )
+  }
 
   return (
     <Card>
