@@ -28,7 +28,7 @@ export default function SignInPage() {
           title: 'Success!',
           description: "You've been signed in.",
         });
-        router.push('/onboarding');
+        router.push('/onboarding/profile');
       } else {
         toast({
           variant: 'destructive',
