@@ -30,7 +30,7 @@ export function MainNav({ isTooltip = false }: { isTooltip?: boolean }) {
 
     if (isTooltip) {
       return (
-        <Tooltip>
+        <Tooltip key={item.label}>
           <TooltipTrigger asChild>
             <Link href={item.href} className={linkClasses}>
               {icon}
@@ -43,7 +43,7 @@ export function MainNav({ isTooltip = false }: { isTooltip?: boolean }) {
     }
 
     return (
-      <Link href={item.href} className={linkClasses}>
+      <Link href={item.href} key={item.label} className={linkClasses}>
         {icon}
         {!isTooltip && item.label}
       </Link>
