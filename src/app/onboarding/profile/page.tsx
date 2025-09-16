@@ -18,6 +18,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { MainLayout } from '@/components/main-layout';
 
 
 const steps = [
@@ -111,89 +112,91 @@ export default function ProfileOnboardingPage() {
   const progress = ((step + 1) / steps.length) * 100;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
-      <div className="w-full max-w-lg">
-        <div className="mb-8">
-            <h2 className="text-2xl font-bold text-center mb-2">Complete Your Profile</h2>
-            <p className="text-muted-foreground text-center">This will help us personalize your EcoQuest.</p>
-            <Progress value={progress} className="w-full mt-4 h-2" />
-        </div>
+    <MainLayout>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
+        <div className="w-full max-w-lg">
+            <div className="mb-8">
+                <h2 className="text-2xl font-bold text-center mb-2">Complete Your Profile</h2>
+                <p className="text-muted-foreground text-center">This will help us personalize your EcoQuest.</p>
+                <Progress value={progress} className="w-full mt-4 h-2" />
+            </div>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>{steps[step].title}</CardTitle>
-                <CardDescription>{steps[step].description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form className="space-y-6">
-                    {step === 0 && (
-                        <>
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input id="name" placeholder="John Doe" className="pl-10" value={formData.name} onChange={handleChange} />
+            <Card>
+                <CardHeader>
+                    <CardTitle>{steps[step].title}</CardTitle>
+                    <CardDescription>{steps[step].description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form className="space-y-6">
+                        {step === 0 && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Full Name</Label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input id="name" placeholder="John Doe" className="pl-10" value={formData.name} onChange={handleChange} />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="householdSize">Household Size</Label>
-                                <div className="relative">
-                                     <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input id="householdSize" type="number" placeholder="e.g., 4" className="pl-10" value={formData.householdSize} onChange={handleChange} />
+                                <div className="space-y-2">
+                                    <Label htmlFor="householdSize">Household Size</Label>
+                                    <div className="relative">
+                                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input id="householdSize" type="number" placeholder="e.g., 4" className="pl-10" value={formData.householdSize} onChange={handleChange} />
+                                    </div>
                                 </div>
-                            </div>
-                        </>
-                    )}
-                    {step === 1 && (
-                         <>
+                            </>
+                        )}
+                        {step === 1 && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="homeType">Home Type</Label>
+                                    <Select onValueChange={handleSelectChange('homeType')} value={formData.homeType}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select home type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="apartment">Apartment</SelectItem>
+                                            <SelectItem value="villa">Villa</SelectItem>
+                                            <SelectItem value="independent_house">Independent House</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="homeSize">Approximate Home Size (sq. ft.)</Label>
+                                    <Input id="homeSize" type="number" placeholder="e.g., 1200" value={formData.homeSize} onChange={handleChange} />
+                                </div>
+                            </>
+                        )}
+                        {step === 2 && (
                             <div className="space-y-2">
-                                <Label htmlFor="homeType">Home Type</Label>
-                                 <Select onValueChange={handleSelectChange('homeType')} value={formData.homeType}>
+                                <Label htmlFor="savingGoal">Monthly Saving Goal</Label>
+                                <Select onValueChange={handleSelectChange('savingGoal')} value={formData.savingGoal}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select home type" />
+                                        <SelectValue placeholder="Select your goal" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="apartment">Apartment</SelectItem>
-                                        <SelectItem value="villa">Villa</SelectItem>
-                                        <SelectItem value="independent_house">Independent House</SelectItem>
+                                        <SelectItem value="5">5%</SelectItem>
+                                        <SelectItem value="10">10%</SelectItem>
+                                        <SelectItem value="15">15%</SelectItem>
+                                        <SelectItem value="20">20%</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="homeSize">Approximate Home Size (sq. ft.)</Label>
-                                <Input id="homeSize" type="number" placeholder="e.g., 1200" value={formData.homeSize} onChange={handleChange} />
-                            </div>
-                        </>
-                    )}
-                     {step === 2 && (
-                         <div className="space-y-2">
-                            <Label htmlFor="savingGoal">Monthly Saving Goal</Label>
-                            <Select onValueChange={handleSelectChange('savingGoal')} value={formData.savingGoal}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select your goal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="5">5%</SelectItem>
-                                    <SelectItem value="10">10%</SelectItem>
-                                    <SelectItem value="15">15%</SelectItem>
-                                    <SelectItem value="20">20%</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-                </form>
-            </CardContent>
-        </Card>
+                        )}
+                    </form>
+                </CardContent>
+            </Card>
 
-        <div className="mt-8 flex justify-between">
-          <Button variant="outline" onClick={handleBack} disabled={step === 0 || loading}>
-            Back
-          </Button>
-          <Button onClick={handleNext} disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : (step === steps.length - 1 ? 'Finish & Connect Meter' : 'Next')}
-          </Button>
+            <div className="mt-8 flex justify-between">
+            <Button variant="outline" onClick={handleBack} disabled={step === 0 || loading}>
+                Back
+            </Button>
+            <Button onClick={handleNext} disabled={loading}>
+                {loading ? <Loader2 className="animate-spin" /> : (step === steps.length - 1 ? 'Finish & Connect Meter' : 'Next')}
+            </Button>
+            </div>
         </div>
-      </div>
-    </div>
+        </div>
+    </MainLayout>
   );
 }
