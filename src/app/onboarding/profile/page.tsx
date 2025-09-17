@@ -18,7 +18,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { MainLayout } from '@/components/main-layout';
+import { onAuthStateChanged } from 'firebase/auth';
 
 
 const steps = [
@@ -67,39 +67,40 @@ export default function ProfileOnboardingPage() {
     } else {
       // Final step, save to firestore
       setLoading(true);
-      const user = auth.currentUser;
-      if (!user) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'You must be logged in to save your profile.',
-        });
-        setLoading(false);
-        router.push('/');
-        return;
-      }
-
-      try {
-        await setDoc(doc(db, "users", user.uid), {
-          ...formData,
-          email: user.email,
-          createdAt: new Date().toISOString(),
-        });
-        toast({
-          title: 'Profile Saved!',
-          description: "Your profile has been created successfully.",
-        });
-        router.push('/onboarding');
-      } catch(error: any) {
-        console.error("Error saving profile: ", error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to save your profile. Please try again.',
-        });
-      } finally {
-        setLoading(false);
-      }
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+           try {
+            await setDoc(doc(db, "users", user.uid), {
+              ...formData,
+              email: user.email,
+              createdAt: new Date().toISOString(),
+            });
+            toast({
+              title: 'Profile Saved!',
+              description: "Your profile has been created successfully.",
+            });
+            router.push('/onboarding');
+          } catch(error: any) {
+            console.error("Error saving profile: ", error);
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Failed to save your profile. Please try again.',
+            });
+          } finally {
+            setLoading(false);
+          }
+        } else {
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'You must be logged in to save your profile.',
+            });
+            setLoading(false);
+            router.push('/');
+            return;
+        }
+      });
     }
   };
 
@@ -112,7 +113,6 @@ export default function ProfileOnboardingPage() {
   const progress = ((step + 1) / steps.length) * 100;
 
   return (
-    <MainLayout>
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
         <div className="w-full max-w-lg">
             <div className="mb-8">
@@ -197,6 +197,5 @@ export default function ProfileOnboardingPage() {
             </div>
         </div>
         </div>
-    </MainLayout>
   );
 }
