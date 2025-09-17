@@ -104,7 +104,8 @@ export default function ProfileOnboardingPage() {
             homeType: formData.homeType,
             homeSize: formData.homeSize,
             savingGoal: formData.savingGoal,
-            profilePicture: formData.profilePicture,
+            // Do not save the profile picture data to prevent exceeding Firestore limits
+            // profilePicture: formData.profilePicture, 
             email: user.email,
             createdAt: new Date().toISOString(),
         });
