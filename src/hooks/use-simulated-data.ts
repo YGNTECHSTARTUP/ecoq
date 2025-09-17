@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, SimulationScenario, WeatherData } from '@/lib/types';
+import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, SimulationScenario, WeatherData, QuestGenerationInput } from '@/lib/types';
 import { questTemplates, badges as badgeTemplates } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { generateNewQuest as generateNewQuestFlow, type QuestGenerationInput } from '@/ai/flows/quest-generation';
+import { generateNewQuest as generateNewQuestFlow } from '@/ai/flows/quest-generation';
 import { useToast } from './use-toast';
 import { Target, Bot } from 'lucide-react';
 
@@ -16,12 +16,17 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
       if (response.ok) {
         return response.json();
       }
+      if (response.status === 401) {
+        console.warn(`API call to ${url} failed with status: 401 (Unauthorized). Check API key or token.`);
+        // Don't retry on auth errors
+        return null;
+      }
       if (i === retries - 1) {
-        console.warn(`API call to ${url} failed with status: ${response.status} after ${retries} attempts.`);
+        console.warn(`API call failed with status: ${response.status} for ${url} after ${retries} attempts.`);
       }
     } catch (error: any) {
       if (i === retries - 1) {
-        console.warn(`API call to ${url} failed after ${retries} attempts. Error: ${error.message}`);
+        console.warn(`API call failed for ${url} after ${retries} attempts. Error: ${error.message}`);
       }
     }
     if (i < retries - 1) {
