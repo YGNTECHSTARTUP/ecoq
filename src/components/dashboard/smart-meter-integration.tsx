@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { DemoGameControls } from '@/components/dashboard/demo-game-controls';
 import {
   Select,
   SelectContent,
@@ -131,8 +132,10 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
       if (!providerToUse && !consumerIdToUse) {
         throw new Error('Please select an area and provider, and enter your consumer ID');
       }
+      
+      const isDemo = consumerIdToUse.startsWith('DEMO');
 
-      const detectedProviderId = providerToUse || detectProvider(consumerIdToUse, areaToUse);
+      const detectedProviderId = isDemo ? 'genus' : (providerToUse || detectProvider(consumerIdToUse, areaToUse));
       const provider = SMART_METER_PROVIDERS.find(p => p.id === detectedProviderId);
 
       if (!provider) {
@@ -169,12 +172,14 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
         credentials: credentialsToUse
       }));
 
-      localStorage.setItem('smartmeter_connection', JSON.stringify({
-        providerId: provider.id,
-        credentials: credentialsToUse,
-        consumerId: consumerIdToUse,
-        area: areaToUse,
-      }));
+      if (!isDemo) {
+        localStorage.setItem('smartmeter_connection', JSON.stringify({
+            providerId: provider.id,
+            credentials: credentialsToUse,
+            consumerId: consumerIdToUse,
+            area: areaToUse,
+        }));
+      }
       
       if (!silent) {
         toast({
@@ -292,6 +297,8 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
 
   const status = getConnectionStatus();
   const StatusIcon = status.icon;
+
+  const isDemo = state.isConnected && state.consumerId.startsWith('DEMO');
 
   if (!state.isConnected) {
     return (
@@ -488,294 +495,300 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
           </div>
         </CardHeader>
       </Card>
+      
+      { isDemo && <DemoGameControls consumerId={state.consumerId} className="mt-6" /> }
 
-      {/* Real-time Metrics */}
-      {state.realTimeData && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-blue-500" />
-                <div className="text-sm text-muted-foreground">Instant Power</div>
-              </div>
-              <div className="text-2xl font-bold">
-                {formatPower(state.realTimeData.instantPower)}
-              </div>
-              <div className="text-xs text-muted-foreground">Live</div>
-            </CardContent>
-          </Card>
+      { !isDemo && (
+        <>
+          {/* Real-time Metrics */}
+          {state.realTimeData && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-blue-500" />
+                    <div className="text-sm text-muted-foreground">Instant Power</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {formatPower(state.realTimeData.instantPower)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Live</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-green-500" />
-                <div className="text-sm text-muted-foreground">Voltage</div>
-              </div>
-              <div className="text-2xl font-bold">
-                {state.realTimeData.voltage.toFixed(1)}V
-              </div>
-              <div className="text-xs text-muted-foreground">RMS</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="h-4 w-4 text-green-500" />
+                    <div className="text-sm text-muted-foreground">Voltage</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {state.realTimeData.voltage.toFixed(1)}V
+                  </div>
+                  <div className="text-xs text-muted-foreground">RMS</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-orange-500" />
-                <div className="text-sm text-muted-foreground">Current</div>
-              </div>
-              <div className="text-2xl font-bold">
-                {state.realTimeData.current.toFixed(1)}A
-              </div>
-              <div className="text-xs text-muted-foreground">RMS</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-orange-500" />
+                    <div className="text-sm text-muted-foreground">Current</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {state.realTimeData.current.toFixed(1)}A
+                  </div>
+                  <div className="text-xs text-muted-foreground">RMS</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Power className="h-4 w-4 text-purple-500" />
-                <div className="text-sm text-muted-foreground">Power Factor</div>
-              </div>
-              <div className="text-2xl font-bold">
-                {state.realTimeData.powerFactor.toFixed(2)}
-              </div>
-              <div className="text-xs text-muted-foreground">Cos φ</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Power className="h-4 w-4 text-purple-500" />
+                    <div className="text-sm text-muted-foreground">Power Factor</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {state.realTimeData.powerFactor.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Cos φ</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-red-500" />
-                <div className="text-sm text-muted-foreground">Frequency</div>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-red-500" />
+                    <div className="text-sm text-muted-foreground">Frequency</div>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {state.realTimeData.frequency.toFixed(1)}Hz
+                  </div>
+                  <div className="text-xs text-muted-foreground">Grid</div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="consumption">Consumption</TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Reading</CardTitle>
+                    <CardDescription>Latest meter reading</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {state.currentReading && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span>Current Reading</span>
+                          <span className="font-bold">{state.currentReading.currentReading.toLocaleString()} kWh</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Units Consumed</span>
+                          <span className="font-bold text-blue-600">{state.currentReading.unitsConsumed} units</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Tariff Rate</span>
+                          <span>₹{state.currentReading.tariffRate}/unit</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Estimated Bill</span>
+                          <span className="font-bold text-green-600">₹{state.currentReading.billAmount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quality Metrics</CardTitle>
+                    <CardDescription>Power quality parameters</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {state.currentReading && (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm">Power Factor</span>
+                            <span className="text-sm font-medium">{((state.currentReading.powerFactor || 0.85) * 100).toFixed(0)}%</span>
+                          </div>
+                          <Progress value={(state.currentReading.powerFactor || 0.85) * 100} className="h-2" />
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="text-center">
+                            <div className="text-lg font-bold">{state.currentReading.voltage?.r.toFixed(0) || '230'}V</div>
+                            <div className="text-muted-foreground">R Phase</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold">{state.currentReading.voltage?.y.toFixed(0) || '235'}V</div>
+                            <div className="text-muted-foreground">Y Phase</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold">{state.currentReading.voltage?.b.toFixed(0) || '228'}V</div>
+                            <div className="text-muted-foreground">B Phase</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
-              <div className="text-2xl font-bold">
-                {state.realTimeData.frequency.toFixed(1)}Hz
+            </TabsContent>
+
+            <TabsContent value="consumption" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daily Consumption Trend</CardTitle>
+                  <CardDescription>Energy consumption over the last 30 days</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {state.historicalData.length > 0 && (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={state.historicalData.slice(-30)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={(value) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        />
+                        <YAxis />
+                        <Tooltip 
+                          labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                          formatter={(value: any) => [`${value} units`, 'Consumption']}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="unitsConsumed" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          dot={{ fill: 'hsl(var(--primary))' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="billing" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Bill</CardTitle>
+                  <CardDescription>Latest billing information</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {state.billingInfo && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
+                        <div>
+                          <div className="font-semibold">Bill Amount</div>
+                          <div className="text-sm text-muted-foreground">Due: {new Date(state.billingInfo.dueDate).toLocaleDateString()}</div>
+                        </div>
+                        <div className="text-2xl font-bold text-primary">
+                          ₹{state.billingInfo.amount.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Units Consumed</div>
+                          <div className="font-semibold">{state.billingInfo.unitsConsumed} units</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Bill Status</div>
+                          <Badge variant={state.billingInfo.status === 'paid' ? 'default' : 'destructive'}>
+                            {state.billingInfo.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>Energy Charges</span>
+                          <span>₹{(state.billingInfo.unitsConsumed * state.billingInfo.tariffDetails.rate).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Fixed Charges</span>
+                          <span>₹{state.billingInfo.tariffDetails.fixedCharge}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold border-t pt-2">
+                          <span>Total Amount</span>
+                          <span>₹{state.billingInfo.amount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Weekly Pattern</CardTitle>
+                    <CardDescription>Average daily consumption by day of week</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={[
+                        { day: 'Mon', consumption: 35 },
+                        { day: 'Tue', consumption: 42 },
+                        { day: 'Wed', consumption: 38 },
+                        { day: 'Thu', consumption: 45 },
+                        { day: 'Fri', consumption: 40 },
+                        { day: 'Sat', consumption: 55 },
+                        { day: 'Sun', consumption: 50 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="day" />
+                        <YAxis />
+                        <Tooltip formatter={(value: any) => [`${value} units`, 'Avg. Consumption']} />
+                        <Bar dataKey="consumption" fill="hsl(var(--primary))" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Efficiency Metrics</CardTitle>
+                    <CardDescription>Your energy usage insights</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span>Monthly Average</span>
+                      <span className="font-semibold">1,250 units</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Cost per Unit</span>
+                      <span className="font-semibold">₹6.50</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Peak Demand</span>
+                      <span className="font-semibold">{(state.currentReading?.maxDemand || 8).toFixed(1)} kW</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Load Factor</span>
+                      <span className="font-semibold">0.75</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="text-xs text-muted-foreground">Grid</div>
-            </CardContent>
-          </Card>
-        </div>
+            </TabsContent>
+          </Tabs>
+        </>
       )}
-
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="consumption">Consumption</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Reading</CardTitle>
-                <CardDescription>Latest meter reading</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {state.currentReading && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span>Current Reading</span>
-                      <span className="font-bold">{state.currentReading.currentReading.toLocaleString()} kWh</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Units Consumed</span>
-                      <span className="font-bold text-blue-600">{state.currentReading.unitsConsumed} units</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Tariff Rate</span>
-                      <span>₹{state.currentReading.tariffRate}/unit</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Estimated Bill</span>
-                      <span className="font-bold text-green-600">₹{state.currentReading.billAmount.toLocaleString()}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quality Metrics</CardTitle>
-                <CardDescription>Power quality parameters</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {state.currentReading && (
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm">Power Factor</span>
-                        <span className="text-sm font-medium">{((state.currentReading.powerFactor || 0.85) * 100).toFixed(0)}%</span>
-                      </div>
-                      <Progress value={(state.currentReading.powerFactor || 0.85) * 100} className="h-2" />
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="text-lg font-bold">{state.currentReading.voltage?.r.toFixed(0) || '230'}V</div>
-                        <div className="text-muted-foreground">R Phase</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold">{state.currentReading.voltage?.y.toFixed(0) || '235'}V</div>
-                        <div className="text-muted-foreground">Y Phase</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold">{state.currentReading.voltage?.b.toFixed(0) || '228'}V</div>
-                        <div className="text-muted-foreground">B Phase</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="consumption" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Daily Consumption Trend</CardTitle>
-              <CardDescription>Energy consumption over the last 30 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {state.historicalData.length > 0 && (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={state.historicalData.slice(-30)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="timestamp" 
-                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                      formatter={(value: any) => [`${value} units`, 'Consumption']}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="unitsConsumed" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="billing" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Bill</CardTitle>
-              <CardDescription>Latest billing information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {state.billingInfo && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
-                    <div>
-                      <div className="font-semibold">Bill Amount</div>
-                      <div className="text-sm text-muted-foreground">Due: {new Date(state.billingInfo.dueDate).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-2xl font-bold text-primary">
-                      ₹{state.billingInfo.amount.toLocaleString()}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Units Consumed</div>
-                      <div className="font-semibold">{state.billingInfo.unitsConsumed} units</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Bill Status</div>
-                      <Badge variant={state.billingInfo.status === 'paid' ? 'default' : 'destructive'}>
-                        {state.billingInfo.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Energy Charges</span>
-                      <span>₹{(state.billingInfo.unitsConsumed * state.billingInfo.tariffDetails.rate).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Fixed Charges</span>
-                      <span>₹{state.billingInfo.tariffDetails.fixedCharge}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold border-t pt-2">
-                      <span>Total Amount</span>
-                      <span>₹{state.billingInfo.amount.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Weekly Pattern</CardTitle>
-                <CardDescription>Average daily consumption by day of week</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={[
-                    { day: 'Mon', consumption: 35 },
-                    { day: 'Tue', consumption: 42 },
-                    { day: 'Wed', consumption: 38 },
-                    { day: 'Thu', consumption: 45 },
-                    { day: 'Fri', consumption: 40 },
-                    { day: 'Sat', consumption: 55 },
-                    { day: 'Sun', consumption: 50 }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip formatter={(value: any) => [`${value} units`, 'Avg. Consumption']} />
-                    <Bar dataKey="consumption" fill="hsl(var(--primary))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Efficiency Metrics</CardTitle>
-                <CardDescription>Your energy usage insights</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span>Monthly Average</span>
-                  <span className="font-semibold">1,250 units</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Cost per Unit</span>
-                  <span className="font-semibold">₹6.50</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Peak Demand</span>
-                  <span className="font-semibold">{(state.currentReading?.maxDemand || 8).toFixed(1)} kW</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Load Factor</span>
-                  <span className="font-semibold">0.75</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };

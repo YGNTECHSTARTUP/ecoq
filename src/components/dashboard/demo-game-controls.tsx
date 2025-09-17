@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Zap, 
   Lightbulb, 
@@ -45,6 +45,7 @@ interface DemoGameControlsProps {
 
 export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoGameControlsProps) {
   const [activeTab, setActiveTab] = useState('appliances');
+  const { toast } = useToast();
   
   const {
     gameState,
@@ -80,36 +81,36 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
   const handleAplianceToggle = async (applianceId: string) => {
     const result = await toggleAppliance(applianceId);
     if (result.success) {
-      toast.success(result.message);
+      toast({ title: result.message });
       if (result.scoreChange) {
-        toast.success(`+${result.scoreChange} points!`);
+        toast({ title: `+${result.scoreChange} points!` });
       }
     } else {
-      toast.error(result.message);
+      toast({ variant: 'destructive', title: result.message });
     }
   };
 
   const handleApplianceUpgrade = async (applianceId: string) => {
     const result = await upgradeAppliance(applianceId);
     if (result.success) {
-      toast.success(result.message);
+      toast({ title: result.message });
       if (result.scoreChange) {
-        toast.success(`+${result.scoreChange} points!`);
+        toast({ title: `+${result.scoreChange} points!` });
       }
     } else {
-      toast.error(result.message);
+      toast({ variant: 'destructive', title: result.message });
     }
   };
 
   const handleQuickAction = async (actionType: QuickActionType) => {
     const result = await executeQuickAction(actionType);
     if (result.success) {
-      toast.success(result.message);
+      toast({ title: result.message });
       if (result.scoreChange) {
-        toast.success(`+${result.scoreChange} points!`);
+        toast({ title: `+${result.scoreChange} points!` });
       }
     } else {
-      toast.error(result.message);
+      toast({ variant: 'destructive', title: result.message });
     }
   };
 
@@ -137,7 +138,7 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
     return 'text-red-600 bg-red-100';
   };
 
-  if (isLoading || !gameState) {
+  if (isLoading && !gameState) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
@@ -150,12 +151,16 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
 
   if (error) {
     return (
-      <Alert>
+      <Alert variant="destructive">
         <AlertDescription>
           Error loading game: {error}
         </AlertDescription>
       </Alert>
     );
+  }
+  
+  if (!gameState) {
+      return null;
   }
 
   return (
@@ -433,6 +438,7 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
                     <div className="flex items-center gap-2">
                       <Badge 
                         variant={appliance.isOn ? 'default' : 'secondary'}
+                        className={appliance.isOn ? 'bg-green-500' : ''}
                         size="sm"
                       >
                         {appliance.isOn ? 'ON' : 'OFF'}
@@ -451,7 +457,7 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
 
       {/* Error Display */}
       {error && (
-        <Alert>
+        <Alert variant="destructive">
           <AlertDescription>
             {error}
           </AlertDescription>
@@ -460,3 +466,5 @@ export function DemoGameControls({ consumerId = 'DEMO123456', className }: DemoG
     </div>
   );
 }
+
+    

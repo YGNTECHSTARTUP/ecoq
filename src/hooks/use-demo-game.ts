@@ -193,3 +193,4 @@ export function useDemoGame(consumerId?: string) {
       Object.values(gameState.appliances).filter(appliance => appliance.isOn) : [],
   };
 }
+    
