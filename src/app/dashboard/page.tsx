@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import SmartMeterIntegration from '@/components/dashboard/smart-meter-integration';
+import { GamingDashboard } from '@/components/gaming/gaming-dashboard';
 import { 
   Zap, 
   Target, 
@@ -29,7 +30,8 @@ import {
   AlertTriangle,
   Leaf,
   RefreshCw,
-  Settings
+  Settings,
+  Gamepad2
 } from 'lucide-react';
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
 
@@ -201,7 +203,7 @@ export default function DashboardPage() {
         )}
 
         <Tabs value={state.activeTab} onValueChange={(value) => setState(prev => ({ ...prev, activeTab: value }))}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Overview
@@ -209,6 +211,10 @@ export default function DashboardPage() {
             <TabsTrigger value="realtime" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               Live Quests
+            </TabsTrigger>
+            <TabsTrigger value="gaming" className="flex items-center gap-2">
+                <Gamepad2 className="h-4 w-4" />
+                Gaming
             </TabsTrigger>
             <TabsTrigger value="impact" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -263,6 +269,10 @@ export default function DashboardPage() {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="gaming" className="space-y-4">
+              <GamingDashboard />
           </TabsContent>
 
           <TabsContent value="impact" className="space-y-4">
