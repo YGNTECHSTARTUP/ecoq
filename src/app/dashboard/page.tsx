@@ -7,6 +7,7 @@ import { BadgesGallery } from '@/components/dashboard/badges-gallery';
 import { SmartHomeControls } from '@/components/dashboard/smart-home-controls';
 import { AiTipGenerator } from '@/components/dashboard/ai-tip-generator';
 import { SimulationControls } from '@/components/dashboard/simulation-controls';
+import { WeatherWidget } from '@/components/dashboard/weather-widget';
 
 export default function DashboardPage() {
   return (
@@ -23,6 +24,7 @@ export default function DashboardPage() {
             <EnergyUsageChart />
           </div>
           <div className="col-span-4 lg:col-span-3 space-y-4">
+            <WeatherWidget />
             <QuestsList />
             <AiTipGenerator />
           </div>

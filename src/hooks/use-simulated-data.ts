@@ -1,10 +1,13 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, SimulationScenario } from '@/lib/types';
+import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, SimulationScenario, WeatherData } from '@/lib/types';
 import { questTemplates, badges as badgeTemplates } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { generateNewQuest as generateNewQuestFlow, type QuestGenerationInput } from '@/ai/flows/quest-generation';
+import { useToast } from './use-toast';
+import { Target, Bot } from 'lucide-react';
+
 
 async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<any> {
   for (let i = 0; i < retries; i++) {
@@ -43,7 +46,6 @@ const generateSimulatedChartData = () => {
       let usage = 1.5 + Math.random(); // base usage
       const h = hour.getHours();
 
-      // Simulate peaks
       if (h >= 6 && h <= 9) usage *= 1.4;
       if (h >= 18 && h <= 21) usage *= 1.7;
       if (h >= 0 && h <= 5) usage *= 0.4;
@@ -71,6 +73,9 @@ export const useSimulatedData = () => {
   const [energyUsage, setEnergyUsage] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [simulationScenario, setSimulationScenario] = useState<SimulationScenario>('normal');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [generatingQuest, setGeneratingQuest] = useState(false);
+  const { toast } = useToast();
 
   const fetchData = useCallback(async (scenario: SimulationScenario) => {
     setLoading(true);
@@ -107,7 +112,7 @@ export const useSimulatedData = () => {
         currentUsage: secureRes.data.power.active_kw,
         isOnline: secureRes.data.status.connection === 'online',
         lastReading: new Date(secureRes.data.status.last_reading),
-        temperature: Number((Math.random() * 5 + 22).toFixed(1)), // Keep some client-side simulation for UI variety
+        temperature: Number((Math.random() * 5 + 22).toFixed(1)),
       });
     }
     if (lntRes) {
@@ -137,24 +142,21 @@ export const useSimulatedData = () => {
     
     let chartData;
     let totalKwhSaved = 0;
-    let moneySaved = 0;
 
     if (historicalRes && historicalRes.readings) {
         chartData = historicalRes.readings.map((reading: any) => ({
           name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
           usage: reading.energy_kwh,
         }));
-        totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5 - curr.usage : 0), 0);
-        moneySaved = historicalRes.summary.total_cost_inr;
+        totalKwhSaved = historicalRes.summary.total_energy_kwh / 24 * (Math.random() * 0.2 + 0.1) ; // Simulate some savings
     } else {
-        console.log("Falling back to simulated chart data.");
         chartData = generateSimulatedChartData();
         totalKwhSaved = chartData.reduce((acc: any, curr: any) => acc + Math.max(0, 1.8 - curr.usage), 0);
-        moneySaved = totalKwhSaved * 5.5; // Approximate cost
     }
     setEnergyUsage(chartData);
 
-    // Other data can remain client-side simulated for now
+    const moneySaved = totalKwhSaved * 5.5; 
+
     setOverview({
       wattsPoints: Math.floor(12500 + Math.random() * 1000),
       kwhSaved: Number(totalKwhSaved.toFixed(1)),
@@ -169,29 +171,61 @@ export const useSimulatedData = () => {
     setSimulationScenario(scenario);
     fetchData(scenario);
   };
+  
+  const generateNewQuest = async () => {
+    setGeneratingQuest(true);
+    try {
+        const input: QuestGenerationInput = {
+            existingQuests: quests.map(q => q.title).join(', '),
+            deviceStatus: smartDevices.map(d => `${d.location} (${d.type}): ${d.currentUsage}kW`).join('; ')
+        };
+
+        const result = await generateNewQuestFlow(input);
+        
+        const newQuest: Quest = {
+            ...result.quest,
+            id: `quest-ai-${Date.now()}`,
+            icon: Bot,
+            isNew: true
+        };
+        
+        setQuests(prev => [newQuest, ...prev.map(q => ({...q, isNew: false}))]);
+        toast({
+            title: "New AI Quest Available!",
+            description: result.quest.title,
+        });
+
+    } catch (error) {
+        console.error("Failed to generate new quest:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not generate a new quest. Please try again.",
+        });
+    } finally {
+        setGeneratingQuest(false);
+    }
+  };
 
 
   useEffect(() => {
     fetchData(simulationScenario);
     
-    // Static data (can be fetched once)
-    const generateQuests = (): Quest[] => {
-      return questTemplates.map((template, index) => {
-        const progress = Math.random();
-        const target = template.type === 'weekly' ? 100 : template.title.includes('2kW') ? 2 : 4;
-        const unit = template.type === 'weekly' ? '%' : template.title.includes('2kW') ? 'kW' : 'hrs';
-        
-        return {
-          ...template,
-          id: `quest-${index}`,
-          progress: Math.floor(progress * target),
-          target: target,
-          unit: unit,
-          reward: template.type === 'weekly' ? 500 : 150,
-        };
-      });
-    };
-    setQuests(generateQuests());
+    const staticQuests = questTemplates.map((template, index) => {
+      const progress = Math.random();
+      const target = template.type === 'weekly' ? 100 : template.title.includes('2kW') ? 2 : 4;
+      const unit = template.type === 'weekly' ? '%' : template.title.includes('2kW') ? 'kW' : 'hrs';
+      
+      return {
+        ...template,
+        id: `quest-${index}`,
+        progress: Math.floor(progress * target),
+        target: target,
+        unit: unit,
+        reward: template.type === 'weekly' ? 500 : 150,
+      };
+    });
+    setQuests(staticQuests);
     
     const users = ['You', 'Alex', 'Maria', 'Chen', 'Sarah'];
     const generateLeaderboard = (): LeaderboardUser[] => {
@@ -212,10 +246,23 @@ export const useSimulatedData = () => {
         }));
     };
     setBadges(generateBadges());
+    
+    // Simulate fetching weather
+    setWeather({
+        location: 'Visakhapatnam',
+        temperature: 31,
+        condition: 'Partly Cloudy',
+        humidity: 78,
+        windSpeed: 15,
+        airQuality: {
+            index: 112,
+            category: 'Unhealthy for Sensitive Groups'
+        }
+    });
 
     const interval = setInterval(() => fetchData(simulationScenario), 10000);
     return () => clearInterval(interval);
   }, [fetchData, simulationScenario]);
 
-  return { smartDevices, quests, leaderboard, badges, overview, energyUsage, loading, handleScenarioChange };
+  return { smartDevices, quests, leaderboard, badges, overview, energyUsage, weather, loading, generatingQuest, handleScenarioChange, generateNewQuest };
 };

@@ -22,8 +22,9 @@ export interface Quest {
   target: number;
   unit: string;
   reward: number;
-  type: 'daily' | 'weekly';
+  type: 'daily' | 'weekly' | 'event';
   icon: React.ComponentType<{ className?: string }>;
+  isNew?: boolean;
 }
 
 export interface Badge {
@@ -51,6 +52,18 @@ export interface Overview {
     kwhSaved: number;
     moneySaved: number;
     questsCompleted: number;
+}
+
+export interface WeatherData {
+    location: string;
+    temperature: number;
+    condition: string;
+    humidity: number;
+    windSpeed: number;
+    airQuality: {
+        index: number;
+        category: string;
+    };
 }
 
 export type SimulationScenario = 'normal' | 'morning_peak' | 'evening_peak' | 'night_low';
