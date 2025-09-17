@@ -12,22 +12,18 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
       if (response.ok) {
         return response.json();
       }
-      // Log non-ok responses but don't treat as a thrown error
       if (i === retries - 1) {
          console.warn(`API call to ${url} failed with status: ${response.status} after ${retries} attempts.`);
       }
     } catch (error: any) {
-      // Log network or other fetch errors
       if (i === retries - 1) {
         console.warn(`API call to ${url} failed after ${retries} attempts. Error: ${error.message}`);
       }
     }
-    // Wait before retrying
     if (i < retries - 1) {
        await new Promise(res => setTimeout(res, delay));
     }
   }
-  // Return null to allow for graceful fallbacks in the calling code
   return null;
 }
 
@@ -139,7 +135,9 @@ export const useSimulatedData = () => {
       setSmartDevices(devices);
       
       // Fetch historical data for chart
-      const historicalRes = await fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical');
+      const historicalRes = await fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical', {
+        headers: { 'X-Secure-Token': 'secure_demo_token_2024' }
+      });
       
       let chartData;
       let totalKwhSaved = 0;
