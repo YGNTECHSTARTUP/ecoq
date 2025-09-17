@@ -5,23 +5,29 @@ import type { SmartMeterDevice, Quest, LeaderboardUser, Badge, Overview, Simulat
 import { questTemplates, badges as badgeTemplates } from '@/lib/mock-data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delay = 1000) {
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delay = 1000): Promise<any> {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch(url, options);
       if (response.ok) {
         return response.json();
       }
-      console.error(`API call failed with status: ${response.status} for ${url}`);
-    } catch (error) {
-      console.error(`API call failed with error for ${url}:`, error);
+      // Log non-ok responses but don't treat as a thrown error
+      if (i === retries - 1) {
+         console.warn(`API call to ${url} failed with status: ${response.status} after ${retries} attempts.`);
+      }
+    } catch (error: any) {
+      // Log network or other fetch errors
+      if (i === retries - 1) {
+        console.warn(`API call to ${url} failed after ${retries} attempts. Error: ${error.message}`);
+      }
     }
+    // Wait before retrying
     if (i < retries - 1) {
        await new Promise(res => setTimeout(res, delay));
     }
   }
-  // Return null instead of throwing an error to allow for graceful fallbacks
-  console.error(`Failed to fetch from ${url} after ${retries} retries.`);
+  // Return null to allow for graceful fallbacks in the calling code
   return null;
 }
 
@@ -83,8 +89,9 @@ export const useSimulatedData = () => {
 
       const [qubeRes, secureRes, lntRes] = await Promise.all([qubePromise, securePromise, lntPromise]);
 
-      const devices: SmartMeterDevice[] = [
-        {
+      const devices: SmartMeterDevice[] = [];
+      if (qubeRes) {
+        devices.push({
           id: qubeRes.meter_info.id,
           brand: 'Qube',
           type: 'main_meter',
@@ -92,8 +99,10 @@ export const useSimulatedData = () => {
           currentUsage: qubeRes.data.power.active_kw,
           isOnline: qubeRes.data.status.connection === 'online',
           lastReading: new Date(qubeRes.data.status.last_reading),
-        },
-        {
+        });
+      }
+       if (secureRes) {
+        devices.push({
           id: secureRes.meter_info.id,
           brand: 'Secure',
           type: 'ac_meter',
@@ -102,8 +111,10 @@ export const useSimulatedData = () => {
           isOnline: secureRes.data.status.connection === 'online',
           lastReading: new Date(secureRes.data.status.last_reading),
           temperature: Number((Math.random() * 5 + 22).toFixed(1)), // Keep some client-side simulation for UI variety
-        },
-        {
+        });
+      }
+      if (lntRes) {
+        devices.push({
           id: lntRes.meter_info.id,
           brand: 'L&T',
           type: 'outlet',
@@ -112,18 +123,19 @@ export const useSimulatedData = () => {
           isOnline: lntRes.data.status.connection === 'online',
           lastReading: new Date(lntRes.data.status.last_reading),
           status: lntRes.data.power.active_kw > 0.01 ? 'on' : 'off',
-        },
-         {
-            id: 'hue_lights',
-            brand: 'Philips Hue',
-            type: 'light',
-            location: 'Bedroom Lights',
-            currentUsage: Number((Math.random() * 0.1).toFixed(2)),
-            isOnline: true,
-            status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
-            lastReading: new Date(),
-        },
-      ];
+        });
+      }
+
+      devices.push({
+          id: 'hue_lights',
+          brand: 'Philips Hue',
+          type: 'light',
+          location: 'Bedroom Lights',
+          currentUsage: Number((Math.random() * 0.1).toFixed(2)),
+          isOnline: true,
+          status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
+          lastReading: new Date(),
+      });
       setSmartDevices(devices);
       
       // Fetch historical data for chart
