@@ -53,13 +53,15 @@ export default function DashboardPage() {
     notifications: []
   });
   const [lastUpdateTime, setLastUpdateTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
 
   const userLocation = { lat: 17.385, lng: 78.4867 }; // Hyderabad
   const userId = 'demo-user-id';
 
   useEffect(() => {
-    // Set the initial time string on client-side to avoid hydration mismatch
+    // Set the initial time/date string on client-side to avoid hydration mismatch
     setLastUpdateTime(state.lastUpdate.toLocaleTimeString());
+    setCurrentDate(new Date().toLocaleDateString());
 
     const updateInterval = setInterval(() => {
       handleRefresh(true);
@@ -151,7 +153,7 @@ export default function DashboardPage() {
             </Badge>
             <Badge variant="outline" className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {new Date().toLocaleDateString()}
+              {currentDate}
             </Badge>
             <Button 
               variant="outline" 
