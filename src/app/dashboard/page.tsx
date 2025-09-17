@@ -30,6 +30,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
+// Smart Meter Integration Component
+import SmartMeterIntegration from '@/components/dashboard/smart-meter-integration';
 
 interface DashboardState {
   activeTab: string;
@@ -315,9 +317,15 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="controls" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <SmartHomeControls />
-              <SimulationControls />
+            <div className="space-y-6">
+              {/* Smart Meter Integration */}
+              <SmartMeterIntegration />
+              
+              {/* Existing Controls */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <SmartHomeControls />
+                <SimulationControls />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
