@@ -115,19 +115,19 @@ const SmartMeterIntegration: React.FC = () => {
       const credentialsToUse = credentials || connectionForm;
       const consumerIdToUse = consumerId || connectionForm.consumerId;
 
-      if (!providerToUse || !consumerIdToUse) {
+      if (!providerToUse && !consumerIdToUse) {
         throw new Error('Please select a provider and enter your consumer ID');
       }
 
       // Auto-detect provider if not specified
-      const detectedProvider = providerToUse || detectProvider(consumerIdToUse, 'Hyderabad');
-      const provider = SMART_METER_PROVIDERS.find(p => p.id === detectedProvider);
+      const detectedProviderId = providerToUse || detectProvider(consumerIdToUse, 'Hyderabad');
+      const provider = SMART_METER_PROVIDERS.find(p => p.id === detectedProviderId);
 
       if (!provider) {
-        throw new Error('Provider not supported');
+        throw new Error('Provider not supported or could not be detected.');
       }
 
-      const api = new SmartMeterAPI(detectedProvider, credentialsToUse);
+      const api = new SmartMeterAPI(provider.id, credentialsToUse);
 
       // Test connection by fetching current reading
       const currentReading = await api.getCurrentReading(consumerIdToUse);
@@ -162,7 +162,7 @@ const SmartMeterIntegration: React.FC = () => {
 
       // Save connection for auto-reconnect
       localStorage.setItem('smartmeter_connection', JSON.stringify({
-        providerId: detectedProvider,
+        providerId: provider.id,
         credentials: credentialsToUse,
         consumerId: consumerIdToUse
       }));
@@ -182,7 +182,7 @@ const SmartMeterIntegration: React.FC = () => {
       toast({
         variant: 'destructive',
         title: 'Connection Failed',
-        description: error.message || 'Could not connect to smart meter. Using demo data.',
+        description: error.message || 'Could not connect. Please check credentials or try demo.',
       });
     }
   };
@@ -287,12 +287,12 @@ const SmartMeterIntegration: React.FC = () => {
               Smart Meter Connection
             </CardTitle>
             <CardDescription>
-              Connect to your electricity provider's smart meter API to get real-time energy data
+              Connect to your electricity provider's smart meter to get real-time energy data
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {state.error && (
-              <Alert>
+              <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{state.error}</AlertDescription>
               </Alert>
@@ -303,7 +303,7 @@ const SmartMeterIntegration: React.FC = () => {
                 <Card 
                   key={provider.id} 
                   className={`cursor-pointer transition-colors ${
-                    selectedProvider === provider.id ? 'ring-2 ring-blue-500' : ''
+                    selectedProvider === provider.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
                   }`}
                   onClick={() => setSelectedProvider(provider.id)}
                 >
@@ -332,12 +332,13 @@ const SmartMeterIntegration: React.FC = () => {
                   onChange={(e) => setConnectionForm(prev => ({ ...prev, consumerId: e.target.value }))}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Find this on your electricity bill
+                  Find this on your electricity bill.
                 </p>
               </div>
 
               {selectedProvider && (
-                <div className="space-y-4">
+                <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+                  <h4 className="font-semibold">{SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.name} Credentials</h4>
                   {SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType === 'apiKey' && (
                     <div>
                       <Label htmlFor="apiKey">API Key</Label>
@@ -403,7 +404,7 @@ const SmartMeterIntegration: React.FC = () => {
 
               <Button 
                 onClick={() => connectToMeter()} 
-                disabled={state.isLoading || !connectionForm.consumerId}
+                disabled={state.isLoading || !connectionForm.consumerId || !selectedProvider}
                 className="w-full"
               >
                 {state.isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
@@ -419,7 +420,7 @@ const SmartMeterIntegration: React.FC = () => {
                   Try Demo Connection
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Use demo data to explore features
+                  Use demo data to explore features without real credentials.
                 </p>
               </div>
             </div>
@@ -449,7 +450,7 @@ const SmartMeterIntegration: React.FC = () => {
                 <RefreshCw className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={disconnect}>
-                <Settings className="h-4 w-4" />
+                <Power className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -615,7 +616,7 @@ const SmartMeterIntegration: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="timestamp" 
-                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                     />
                     <YAxis />
                     <Tooltip 
@@ -625,9 +626,9 @@ const SmartMeterIntegration: React.FC = () => {
                     <Line 
                       type="monotone" 
                       dataKey="unitsConsumed" 
-                      stroke="#2563eb" 
+                      stroke="hsl(var(--primary))" 
                       strokeWidth={2}
-                      dot={{ fill: '#2563eb' }}
+                      dot={{ fill: 'hsl(var(--primary))' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -645,12 +646,12 @@ const SmartMeterIntegration: React.FC = () => {
             <CardContent>
               {state.billingInfo && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
                     <div>
                       <div className="font-semibold">Bill Amount</div>
                       <div className="text-sm text-muted-foreground">Due: {new Date(state.billingInfo.dueDate).toLocaleDateString()}</div>
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-2xl font-bold text-primary">
                       ₹{state.billingInfo.amount.toLocaleString()}
                     </div>
                   </div>
@@ -710,7 +711,7 @@ const SmartMeterIntegration: React.FC = () => {
                     <XAxis dataKey="day" />
                     <YAxis />
                     <Tooltip formatter={(value: any) => [`${value} units`, 'Avg. Consumption']} />
-                    <Bar dataKey="consumption" fill="#10b981" />
+                    <Bar dataKey="consumption" fill="hsl(var(--primary))" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>

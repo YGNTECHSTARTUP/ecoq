@@ -27,7 +27,8 @@ import {
   Calendar,
   AlertTriangle,
   Leaf,
-  RefreshCw
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
 // Smart Meter Integration Component
@@ -62,7 +63,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Set the initial time/date string on client-side to avoid hydration mismatch
-    setLastUpdateTime(state.lastUpdate.toLocaleTimeString());
+    setLastUpdateTime(new Date().toLocaleTimeString());
     setCurrentDate(new Date().toLocaleDateString());
 
     const updateInterval = setInterval(() => {
@@ -173,7 +174,7 @@ export default function DashboardPage() {
         {state.notifications.length > 0 && (
           <div className="space-y-2">
             {state.notifications.slice(0, 2).map((notification) => (
-              <Alert key={notification.id} className={notification.urgent ? 'border-red-500 bg-red-50' : ''}>
+              <Alert key={notification.id} variant={notification.urgent ? 'destructive' : 'default'}>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="flex justify-between items-center">
                   <div>
@@ -211,7 +212,7 @@ export default function DashboardPage() {
               Community
             </TabsTrigger>
             <TabsTrigger value="controls" className="flex items-center gap-2">
-              <Leaf className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
               Controls
             </TabsTrigger>
           </TabsList>

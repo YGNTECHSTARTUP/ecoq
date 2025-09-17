@@ -171,28 +171,31 @@ export class SmartMeterAPI {
    * Get current meter reading
    */
   async getCurrentReading(consumerId: string): Promise<SmartMeterReading> {
-    try {
-      const token = await this.authenticate();
-      const headers = this.buildHeaders(token);
+    // For demo purposes, we will use mock data for all providers
+    // In a real implementation, you would use the API calls as shown in comments
+    
+    // try {
+    //   const token = await this.authenticate();
+    //   const headers = this.buildHeaders(token);
       
-      const response = await fetch(
-        `${this.provider.baseUrl}/consumers/${consumerId}/current`,
-        { headers }
-      );
+    //   const response = await fetch(
+    //     `${this.provider.baseUrl}/consumers/${consumerId}/current`,
+    //     { headers }
+    //   );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //   }
 
-      const data = await response.json();
-      return this.normalizeReading(data, consumerId);
+    //   const data = await response.json();
+    //   return this.normalizeReading(data, consumerId);
 
-    } catch (error) {
-      console.error(`Failed to get current reading from ${this.provider.name}:`, error);
+    // } catch (error) {
+    //   console.error(`Failed to get current reading from ${this.provider.name}:`, error);
       
       // Return mock data for development/demo purposes
       return this.getMockReading(consumerId);
-    }
+    // }
   }
 
   /**
@@ -203,28 +206,29 @@ export class SmartMeterAPI {
     startDate: string, 
     endDate: string
   ): Promise<SmartMeterReading[]> {
-    try {
-      const token = await this.authenticate();
-      const headers = this.buildHeaders(token);
+     // For demo purposes, we will use mock data
+    // try {
+    //   const token = await this.authenticate();
+    //   const headers = this.buildHeaders(token);
       
-      const response = await fetch(
-        `${this.provider.baseUrl}/consumers/${consumerId}/history?start=${startDate}&end=${endDate}`,
-        { headers }
-      );
+    //   const response = await fetch(
+    //     `${this.provider.baseUrl}/consumers/${consumerId}/history?start=${startDate}&end=${endDate}`,
+    //     { headers }
+    //   );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //   }
 
-      const data = await response.json();
-      return data.readings.map((reading: any) => this.normalizeReading(reading, consumerId));
+    //   const data = await response.json();
+    //   return data.readings.map((reading: any) => this.normalizeReading(reading, consumerId));
 
-    } catch (error) {
-      console.error(`Failed to get historical readings from ${this.provider.name}:`, error);
+    // } catch (error) {
+    //   console.error(`Failed to get historical readings from ${this.provider.name}:`, error);
       
       // Return mock historical data
       return this.getMockHistoricalReadings(consumerId, startDate, endDate);
-    }
+    // }
   }
 
   /**
@@ -242,31 +246,32 @@ export class SmartMeterAPI {
       throw new Error(`Real-time data not supported by ${this.provider.name}`);
     }
 
-    try {
-      const token = await this.authenticate();
-      const headers = this.buildHeaders(token);
+    // For demo purposes, we will use mock data
+    // try {
+    //   const token = await this.authenticate();
+    //   const headers = this.buildHeaders(token);
       
-      const response = await fetch(
-        `${this.provider.baseUrl}/consumers/${consumerId}/realtime`,
-        { headers }
-      );
+    //   const response = await fetch(
+    //     `${this.provider.baseUrl}/consumers/${consumerId}/realtime`,
+    //     { headers }
+    //   );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //   }
 
-      const data = await response.json();
-      return {
-        instantPower: data.instantPower || data.power || Math.random() * 5000,
-        voltage: data.voltage || 230 + Math.random() * 10,
-        current: data.current || Math.random() * 20,
-        frequency: data.frequency || 50 + Math.random() * 0.5,
-        powerFactor: data.powerFactor || 0.85 + Math.random() * 0.1,
-        timestamp: new Date().toISOString()
-      };
+    //   const data = await response.json();
+    //   return {
+    //     instantPower: data.instantPower || data.power || Math.random() * 5000,
+    //     voltage: data.voltage || 230 + Math.random() * 10,
+    //     current: data.current || Math.random() * 20,
+    //     frequency: data.frequency || 50 + Math.random() * 0.5,
+    //     powerFactor: data.powerFactor || 0.85 + Math.random() * 0.1,
+    //     timestamp: new Date().toISOString()
+    //   };
 
-    } catch (error) {
-      console.error(`Failed to get real-time data from ${this.provider.name}:`, error);
+    // } catch (error) {
+    //   console.error(`Failed to get real-time data from ${this.provider.name}:`, error);
       
       // Return mock real-time data
       return {
@@ -277,7 +282,7 @@ export class SmartMeterAPI {
         powerFactor: 0.85 + Math.random() * 0.1,
         timestamp: new Date().toISOString()
       };
-    }
+    // }
   }
 
   /**
@@ -292,33 +297,34 @@ export class SmartMeterAPI {
     status: 'paid' | 'unpaid' | 'overdue';
     tariffDetails: any;
   }> {
-    try {
-      const token = await this.authenticate();
-      const headers = this.buildHeaders(token);
+    // For demo purposes, we will use mock data
+    // try {
+    //   const token = await this.authenticate();
+    //   const headers = this.buildHeaders(token);
       
-      const monthParam = month ? `?month=${month}` : '';
-      const response = await fetch(
-        `${this.provider.baseUrl}/consumers/${consumerId}/billing${monthParam}`,
-        { headers }
-      );
+    //   const monthParam = month ? `?month=${month}` : '';
+    //   const response = await fetch(
+    //     `${this.provider.baseUrl}/consumers/${consumerId}/billing${monthParam}`,
+    //     { headers }
+    //   );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //   }
 
-      const data = await response.json();
-      return {
-        billNumber: data.billNumber || `BILL${Date.now()}`,
-        billDate: data.billDate || new Date().toISOString().split('T')[0],
-        dueDate: data.dueDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        unitsConsumed: data.unitsConsumed || Math.floor(Math.random() * 500) + 200,
-        amount: data.amount || Math.floor(Math.random() * 5000) + 2000,
-        status: data.status || 'unpaid',
-        tariffDetails: data.tariffDetails || { rate: 6.5, fixedCharge: 150 }
-      };
+    //   const data = await response.json();
+    //   return {
+    //     billNumber: data.billNumber || `BILL${Date.now()}`,
+    //     billDate: data.billDate || new Date().toISOString().split('T')[0],
+    //     dueDate: data.dueDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    //     unitsConsumed: data.unitsConsumed || Math.floor(Math.random() * 500) + 200,
+    //     amount: data.amount || Math.floor(Math.random() * 5000) + 2000,
+    //     status: data.status || 'unpaid',
+    //     tariffDetails: data.tariffDetails || { rate: 6.5, fixedCharge: 150 }
+    //   };
 
-    } catch (error) {
-      console.error(`Failed to get billing info from ${this.provider.name}:`, error);
+    // } catch (error) {
+    //   console.error(`Failed to get billing info from ${this.provider.name}:`, error);
       
       // Return mock billing data
       const unitsConsumed = Math.floor(Math.random() * 500) + 200;
@@ -331,7 +337,7 @@ export class SmartMeterAPI {
         status: 'unpaid',
         tariffDetails: { rate: 6.5, fixedCharge: 150 }
       };
-    }
+    // }
   }
 
   private buildHeaders(token: string): HeadersInit {
