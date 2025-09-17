@@ -27,12 +27,9 @@ import {
   Calendar,
   AlertTriangle,
   Leaf,
-  RefreshCw,
-  Settings
+  RefreshCw
 } from 'lucide-react';
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
-// Smart Meter Integration Component
-import SmartMeterIntegration from '@/components/dashboard/smart-meter-integration';
 
 interface DashboardState {
   activeTab: string;
@@ -64,7 +61,7 @@ export default function DashboardPage() {
   useEffect(() => {
     // Set the initial time/date string on client-side to avoid hydration mismatch
     setLastUpdateTime(new Date().toLocaleTimeString());
-    setCurrentDate(new Date().toLocaleDateString());
+    setCurrentDate(new Date().toLocaleDateString('en-GB'));
 
     const updateInterval = setInterval(() => {
       handleRefresh(true);
@@ -194,7 +191,7 @@ export default function DashboardPage() {
         )}
 
         <Tabs value={state.activeTab} onValueChange={(value) => setState(prev => ({ ...prev, activeTab: value }))}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Overview
@@ -210,10 +207,6 @@ export default function DashboardPage() {
             <TabsTrigger value="community" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Community
-            </TabsTrigger>
-            <TabsTrigger value="controls" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Controls
             </TabsTrigger>
           </TabsList>
 
@@ -231,6 +224,10 @@ export default function DashboardPage() {
                 <AiTipGenerator />
               </div>
             </div>
+             <div className="grid gap-4 md:grid-cols-2">
+                <SmartHomeControls />
+                <SimulationControls />
+              </div>
           </TabsContent>
 
           <TabsContent value="realtime" className="space-y-4">
@@ -315,19 +312,6 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="controls" className="space-y-4">
-            <div className="space-y-6">
-              {/* Smart Meter Integration */}
-              <SmartMeterIntegration />
-              
-              {/* Existing Controls */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <SmartHomeControls />
-                <SimulationControls />
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </main>
