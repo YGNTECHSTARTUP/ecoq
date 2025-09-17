@@ -24,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserNav } from '@/components/user-nav';
 import { MainNav } from '@/components/main-nav';
+import { BottomNavBar } from '@/components/bottom-nav-bar';
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -95,8 +96,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <UserNav />
         </header>
-        {children}
+        <div className="pb-24 sm:pb-0">{children}</div>
       </div>
+      <BottomNavBar />
     </div>
   );
 }

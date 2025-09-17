@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster"
 export const metadata: Metadata = {
   title: 'EcoQuest',
   description: 'Gamified Energy-Saving App',
+  manifest: "/manifest.json",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -18,6 +20,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body className="font-body antialiased bg-background">
         {children}

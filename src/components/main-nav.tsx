@@ -4,15 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Target, Trophy, Users, Award, Home, Lightbulb, Settings } from 'lucide-react';
+import { LayoutDashboard, Target, Trophy, Users, Home } from 'lucide-react';
 
-const navItems = [
-    { href: '#', icon: LayoutDashboard, label: 'Dashboard' },
+export const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '#', icon: Target, label: 'Quests' },
-    { href: '#', icon: Trophy, label: 'Leaderboard' },
-    { href: '#', icon: Award, label: 'Badges' },
-    { href: '#', icon: Home, label: 'Smart Home' },
-    { href: '#', icon: Lightbulb, label: 'Tips' },
+    { href: '#', icon: Trophy, label: 'Leaders' },
+    { href: '#', icon: Home, label: 'Home' },
+    { href: '#', icon: Users, label: 'Community' },
 ];
 
 export function MainNav({ isTooltip = false }: { isTooltip?: boolean }) {
