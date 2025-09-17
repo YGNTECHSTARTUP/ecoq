@@ -65,42 +65,42 @@ export default function ProfileOnboardingPage() {
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      // Final step, save to firestore
       setLoading(true);
-      onAuthStateChanged(auth, async (user) => {
+      try {
+        const user = await new Promise((resolve, reject) => {
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe();
+            resolve(user);
+          }, reject);
+        });
+
         if (user) {
-           try {
-            await setDoc(doc(db, "users", user.uid), {
-              ...formData,
-              email: user.email,
-              createdAt: new Date().toISOString(),
-            });
-            toast({
-              title: 'Profile Saved!',
-              description: "Your profile has been created successfully.",
-            });
-            router.push('/onboarding');
-          } catch(error: any) {
-            console.error("Error saving profile: ", error);
-            toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'Failed to save your profile. Please try again.',
-            });
-          } finally {
-            setLoading(false);
-          }
+          await setDoc(doc(db, "users", (user as any).uid), {
+            ...formData,
+            email: (user as any).email,
+            createdAt: new Date().toISOString(),
+          });
+          toast({
+            title: 'Profile Saved!',
+            description: "Your profile has been created successfully.",
+          });
+          router.push('/onboarding');
         } else {
-            toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'You must be logged in to save your profile.',
-            });
-            setLoading(false);
-            router.push('/');
-            return;
+          throw new Error('You must be logged in to save your profile.');
         }
-      });
+      } catch (error: any) {
+        console.error("Error saving profile: ", error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message || 'Failed to save your profile. Please try again.',
+        });
+        if (!auth.currentUser) {
+            router.push('/');
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
