@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,11 +52,15 @@ export default function DashboardPage() {
     isRefreshing: false,
     notifications: []
   });
+  const [lastUpdateTime, setLastUpdateTime] = useState('');
 
   const userLocation = { lat: 17.385, lng: 78.4867 }; // Hyderabad
   const userId = 'demo-user-id';
 
   useEffect(() => {
+    // Set the initial time string on client-side to avoid hydration mismatch
+    setLastUpdateTime(state.lastUpdate.toLocaleTimeString());
+
     const updateInterval = setInterval(() => {
       handleRefresh(true);
     }, 300000); // Check every 5 minutes
@@ -66,7 +71,12 @@ export default function DashboardPage() {
     });
 
     return () => clearInterval(updateInterval);
-  }, [toast]);
+  }, []);
+
+  useEffect(() => {
+    setLastUpdateTime(state.lastUpdate.toLocaleTimeString());
+  }, [state.lastUpdate]);
+
 
   const handleRefresh = async (silent = false) => {
     if (state.isRefreshing) return;
@@ -131,7 +141,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">EcoQuest Dashboard</h2>
             <p className="text-muted-foreground">
-              Real-time environmental missions • Last updated {state.lastUpdate.toLocaleTimeString()}
+              Real-time environmental missions • Last updated {lastUpdateTime}
             </p>
           </div>
           <div className="flex items-center gap-2">
