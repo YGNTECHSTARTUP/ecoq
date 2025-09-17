@@ -477,14 +477,14 @@ export class CommunityGamingSystem {
         description: 'Leading the renewable energy revolution in our community.',
         maxMembers: 12,
         isPrivate: false,
-        requirements: { minLevel: 10, maxMembers: 12, inviteOnly: false, requiredSpecializations: ['solar_expert'] }
+        requirements: { minLevel: 10, maxMembers: 12, inviteOnly: false, requiredSpecializations: ['solar_expert' as const] }
       },
       {
         name: 'Peak Hour Optimizers',
         description: 'Masters of energy consumption timing and efficiency.',
         maxMembers: 6,
         isPrivate: true,
-        requirements: { minLevel: 15, maxMembers: 6, inviteOnly: true, requiredSpecializations: ['peak_optimizer'] }
+        requirements: { minLevel: 15, maxMembers: 6, inviteOnly: true, requiredSpecializations: ['peak_optimizer' as const] }
       }
     ];
 

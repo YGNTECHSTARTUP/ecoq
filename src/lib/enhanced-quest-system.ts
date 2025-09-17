@@ -433,7 +433,7 @@ export class EnhancedQuestSystem {
       });
     }
 
-    if (template.rarity === 'legendary') {
+    if (template.visual.rarity === 'legendary') {
       bonusRewards.push({
         type: 'title',
         value: `Legend of ${template.titleTemplate}`,

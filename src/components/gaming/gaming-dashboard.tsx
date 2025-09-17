@@ -30,7 +30,8 @@ import {
   Lock,
   Play,
   RotateCcw,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 
 import { 
@@ -180,7 +181,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
       if (rewards.length > 0) {
         const pointsReward = rewards.find(r => r.type === 'points');
         if (pointsReward && typeof pointsReward.value === 'number') {
-          setUserPoints(prev => prev + pointsReward.value as number);
+          setUserPoints(prev => prev + Number(pointsReward.value));
         }
         
         // Move quest from active to completed
@@ -360,7 +361,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
                         <h4 className="font-medium">{quest.title}</h4>
                         <div className="flex items-center gap-2">
                           {getQuestTypeIcon(quest.type)}
-                          <Badge size="sm" className={getDifficultyColor(quest.difficulty)}>
+                          <Badge className={getDifficultyColor(quest.difficulty)}>
                             {quest.difficulty}
                           </Badge>
                         </div>
@@ -399,7 +400,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
                     <div>
                       <h4 className="font-medium">{achievement.name}</h4>
                       <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                      <Badge size="sm" className={getRarityColor(achievement.rarity)}>
+                      <Badge className={getRarityColor(achievement.rarity)}>
                         +{achievement.points} points
                       </Badge>
                     </div>
@@ -491,7 +492,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
                                 {getQuestTypeIcon(quest.type)}
                                 <span className="text-xs capitalize">{quest.type}</span>
                               </div>
-                              <Badge size="sm" className={getDifficultyColor(quest.difficulty)}>
+                              <Badge className={getDifficultyColor(quest.difficulty)}>
                                 {quest.difficulty}
                               </Badge>
                               <div className="flex items-center gap-1">
