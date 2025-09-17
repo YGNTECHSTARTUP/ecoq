@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +29,8 @@ import {
   CheckCircle,
   Lock,
   Play,
-  RotateCcw
+  RotateCcw,
+  Settings
 } from 'lucide-react';
 
 import { 
@@ -45,6 +47,10 @@ import {
   type LeaderboardEntry,
   type Leaderboard
 } from '@/lib/enhanced-quest-system';
+import EnhancedRealTimeQuests from '../dashboard/enhanced-real-time-quests';
+import SmartMeterIntegration from '../dashboard/smart-meter-integration';
+import { Leaderboard as CommunityLeaderboard } from '../dashboard/leaderboard';
+
 
 interface GamingDashboardProps {
   userId?: string;
@@ -61,6 +67,8 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
   const [availableQuests, setAvailableQuests] = useState<Quest[]>([]);
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+
+  const userLocation = { lat: 17.385, lng: 78.4867 }; // Hyderabad
 
   const currentLevel = gamingPointsCalculator.getUserLevel(userPoints);
   const levelProgress = gamingPointsCalculator.getProgressToNextLevel(userPoints);
@@ -268,12 +276,16 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
 
       {/* Gaming Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">🎮 Overview</TabsTrigger>
           <TabsTrigger value="quests">🎯 Quests</TabsTrigger>
           <TabsTrigger value="leaderboard">🏆 Leaderboard</TabsTrigger>
           <TabsTrigger value="achievements">🎖️ Achievements</TabsTrigger>
           <TabsTrigger value="rewards">🎁 Rewards</TabsTrigger>
+          <TabsTrigger value="controls">
+            <Settings className="h-4 w-4 mr-2" />
+            Controls
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -392,13 +404,30 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
 
         {/* Quests Tab */}
         <TabsContent value="quests" className="space-y-6">
+           <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-blue-500" />
+                  Live Environmental Quests
+                </CardTitle>
+                <CardDescription>
+                  Dynamic quests based on real-time weather and air quality conditions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EnhancedRealTimeQuests 
+                  userId={userId}
+                  userLocation={userLocation}
+                />
+              </CardContent>
+            </Card>
           <div className="grid gap-6">
             {/* Available Quests */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Available Quests
+                  Available Gaming Quests
                 </CardTitle>
                 <CardDescription>New challenges waiting for you</CardDescription>
               </CardHeader>
@@ -450,7 +479,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Play className="h-5 w-5 text-blue-500" />
-                    Active Quests
+                    Active Gaming Quests
                   </CardTitle>
                   <CardDescription>Quests in progress</CardDescription>
                 </CardHeader>
@@ -519,62 +548,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
 
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                Global Leaderboard
-              </CardTitle>
-              <CardDescription>Top energy efficiency champions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {leaderboard && (
-                <div className="space-y-3">
-                  {leaderboard.entries.slice(0, 10).map((entry, index) => (
-                    <div 
-                      key={entry.userId} 
-                      className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
-                        index < 3 ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          index === 0 ? 'bg-yellow-500 text-white' :
-                          index === 1 ? 'bg-gray-400 text-white' :
-                          index === 2 ? 'bg-amber-600 text-white' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <Avatar>
-                          <AvatarFallback>{entry.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="font-medium">{entry.username}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Level {entry.level} • {entry.questsCompleted} quests completed
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{entry.totalPoints.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground">points</div>
-                      </div>
-                      
-                      {entry.currentStreak > 0 && (
-                        <div className="flex items-center gap-1 text-orange-500">
-                          <Flame className="h-4 w-4" />
-                          <span className="text-sm font-medium">{entry.currentStreak}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            <CommunityLeaderboard />
         </TabsContent>
 
         {/* Achievements Tab */}
@@ -662,6 +636,11 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        {/* Controls Tab */}
+        <TabsContent value="controls" className="space-y-6">
+          <SmartMeterIntegration />
         </TabsContent>
       </Tabs>
     </div>
