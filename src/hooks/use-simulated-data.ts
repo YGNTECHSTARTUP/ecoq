@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,7 +14,7 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
         return response.json();
       }
       if (i === retries - 1) {
-         console.warn(`API call to ${url} failed with status: ${response.status} after ${retries} attempts.`);
+        console.warn(`API call to ${url} failed with status: ${response.status} after ${retries} attempts.`);
       }
     } catch (error: any) {
       if (i === retries - 1) {
@@ -26,6 +27,34 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
   }
   return null;
 }
+
+const scenarioToHour: Record<SimulationScenario, number | undefined> = {
+  normal: undefined,
+  morning_peak: 8,
+  evening_peak: 20,
+  night_low: 2,
+};
+
+const generateSimulatedChartData = () => {
+  const data = [];
+  const now = new Date();
+  for (let i = 23; i >= 0; i--) {
+      const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+      let usage = 1.5 + Math.random(); // base usage
+      const h = hour.getHours();
+
+      // Simulate peaks
+      if (h >= 6 && h <= 9) usage *= 1.4;
+      if (h >= 18 && h <= 21) usage *= 1.7;
+      if (h >= 0 && h <= 5) usage *= 0.4;
+      
+      data.push({
+          name: hour.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+          usage: parseFloat(usage.toFixed(2)),
+      });
+  }
+  return data;
+};
 
 
 export const useSimulatedData = () => {
@@ -42,151 +71,108 @@ export const useSimulatedData = () => {
   const [energyUsage, setEnergyUsage] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [simulationScenario, setSimulationScenario] = useState<SimulationScenario>('normal');
-  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const scenarioToHour: Record<SimulationScenario, number | undefined> = {
-    normal: undefined,
-    morning_peak: 8,
-    evening_peak: 20,
-    night_low: 2,
-  };
-
-  const generateSimulatedChartData = () => {
-    const data = [];
-    const now = new Date();
-    for (let i = 23; i >= 0; i--) {
-        const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
-        let usage = 1.5 + Math.random(); // base usage
-        const h = hour.getHours();
-
-        // Simulate peaks
-        if (h >= 6 && h <= 9) usage *= 1.4;
-        if (h >= 18 && h <= 21) usage *= 1.7;
-        if (h >= 0 && h <= 5) usage *= 0.4;
-        
-        data.push({
-            name: hour.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
-            usage: parseFloat(usage.toFixed(2)),
-        });
-    }
-    return data;
-  };
-
-  const fetchData = useCallback(async (scenario: SimulationScenario = 'normal') => {
+  const fetchData = useCallback(async (scenario: SimulationScenario) => {
     setLoading(true);
-    try {
-      const hour = scenarioToHour[scenario];
-      const hourParam = hour !== undefined ? `&hour=${hour}` : '';
+    const hour = scenarioToHour[scenario];
+    const hourParam = hour !== undefined ? `&hour=${hour}` : '';
 
-      // Fetch data from unified gateway which gives normalized data
-      const qubePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=QUBE_001&brand=QUBE&userId=user123${hourParam}`);
-      const securePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=SEC_002&brand=SECURE&userId=user123${hourParam}`);
-      const lntPromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=LNT_003&brand=LNT&userId=user123${hourParam}`);
+    const qubePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=QUBE_001&brand=QUBE&userId=user123${hourParam}`);
+    const securePromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=SEC_002&brand=SECURE&userId=user123${hourParam}`);
+    const lntPromise = fetchWithRetry(`/api/smart-meter/unifiedMeterGateway?meterId=LNT_003&brand=LNT&userId=user123${hourParam}`);
+    const historicalPromise = fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical', {
+      headers: { 'X-Secure-Token': 'secure_demo_token_2024' }
+    });
 
-      const [qubeRes, secureRes, lntRes] = await Promise.all([qubePromise, securePromise, lntPromise]);
+    const [qubeRes, secureRes, lntRes, historicalRes] = await Promise.all([qubePromise, securePromise, lntPromise, historicalPromise]);
 
-      const devices: SmartMeterDevice[] = [];
-      if (qubeRes) {
-        devices.push({
-          id: qubeRes.meter_info.id,
-          brand: 'Qube',
-          type: 'main_meter',
-          location: 'Main House',
-          currentUsage: qubeRes.data.power.active_kw,
-          isOnline: qubeRes.data.status.connection === 'online',
-          lastReading: new Date(qubeRes.data.status.last_reading),
-        });
-      }
-       if (secureRes) {
-        devices.push({
-          id: secureRes.meter_info.id,
-          brand: 'Secure',
-          type: 'ac_meter',
-          location: 'Living Room AC',
-          currentUsage: secureRes.data.power.active_kw,
-          isOnline: secureRes.data.status.connection === 'online',
-          lastReading: new Date(secureRes.data.status.last_reading),
-          temperature: Number((Math.random() * 5 + 22).toFixed(1)), // Keep some client-side simulation for UI variety
-        });
-      }
-      if (lntRes) {
-        devices.push({
-          id: lntRes.meter_info.id,
-          brand: 'L&T',
-          type: 'outlet',
-          location: 'TV Outlet',
-          currentUsage: lntRes.data.power.active_kw,
-          isOnline: lntRes.data.status.connection === 'online',
-          lastReading: new Date(lntRes.data.status.last_reading),
-          status: lntRes.data.power.active_kw > 0.01 ? 'on' : 'off',
-        });
-      }
-
+    const devices: SmartMeterDevice[] = [];
+    if (qubeRes) {
       devices.push({
-          id: 'hue_lights',
-          brand: 'Philips Hue',
-          type: 'light',
-          location: 'Bedroom Lights',
-          currentUsage: Number((Math.random() * 0.1).toFixed(2)),
-          isOnline: true,
-          status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
-          lastReading: new Date(),
+        id: qubeRes.meter_info.id,
+        brand: 'Qube',
+        type: 'main_meter',
+        location: 'Main House',
+        currentUsage: qubeRes.data.power.active_kw,
+        isOnline: qubeRes.data.status.connection === 'online',
+        lastReading: new Date(qubeRes.data.status.last_reading),
       });
-      setSmartDevices(devices);
-      
-      // Fetch historical data for chart
-      const historicalRes = await fetchWithRetry('/api/smart-meter/secureMetersData?deviceId=SEC_HIST_01&dataType=historical', {
-        headers: { 'X-Secure-Token': 'secure_demo_token_2024' }
-      });
-      
-      let chartData;
-      let totalKwhSaved = 0;
-      let moneySaved = 0;
-
-      if (historicalRes && historicalRes.readings) {
-          chartData = historicalRes.readings.map((reading: any) => ({
-            name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
-            usage: reading.energy_kwh,
-          }));
-          totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5 - curr.usage : 0), 0);
-          moneySaved = historicalRes.summary.total_cost_inr;
-      } else {
-          console.log("Falling back to simulated chart data.");
-          chartData = generateSimulatedChartData();
-          totalKwhSaved = chartData.reduce((acc, curr) => acc + Math.max(0, 1.8 - curr.usage), 0);
-          moneySaved = totalKwhSaved * 5.5; // Approximate cost
-      }
-      setEnergyUsage(chartData);
-
-      // Other data can remain client-side simulated for now
-      setOverview({
-        wattsPoints: Math.floor(12500 + Math.random() * 1000),
-        kwhSaved: Number(totalKwhSaved.toFixed(1)),
-        moneySaved: Number(moneySaved.toFixed(2)),
-        questsCompleted: Math.floor(12 + Math.random() * 5),
-      });
-
-    } catch (error) {
-      console.error("Failed to fetch simulated data:", error);
-    } finally {
-      setLoading(false);
     }
+     if (secureRes) {
+      devices.push({
+        id: secureRes.meter_info.id,
+        brand: 'Secure',
+        type: 'ac_meter',
+        location: 'Living Room AC',
+        currentUsage: secureRes.data.power.active_kw,
+        isOnline: secureRes.data.status.connection === 'online',
+        lastReading: new Date(secureRes.data.status.last_reading),
+        temperature: Number((Math.random() * 5 + 22).toFixed(1)), // Keep some client-side simulation for UI variety
+      });
+    }
+    if (lntRes) {
+      devices.push({
+        id: lntRes.meter_info.id,
+        brand: 'L&T',
+        type: 'outlet',
+        location: 'TV Outlet',
+        currentUsage: lntRes.data.power.active_kw,
+        isOnline: lntRes.data.status.connection === 'online',
+        lastReading: new Date(lntRes.data.status.last_reading),
+        status: lntRes.data.power.active_kw > 0.01 ? 'on' : 'off',
+      });
+    }
+
+    devices.push({
+        id: 'hue_lights',
+        brand: 'Philips Hue',
+        type: 'light',
+        location: 'Bedroom Lights',
+        currentUsage: Number((Math.random() * 0.1).toFixed(2)),
+        isOnline: true,
+        status: Math.random() > 0.3 ? 'on' : 'auto_dimmed',
+        lastReading: new Date(),
+    });
+    setSmartDevices(devices);
+    
+    let chartData;
+    let totalKwhSaved = 0;
+    let moneySaved = 0;
+
+    if (historicalRes && historicalRes.readings) {
+        chartData = historicalRes.readings.map((reading: any) => ({
+          name: new Date(reading.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+          usage: reading.energy_kwh,
+        }));
+        totalKwhSaved = chartData.reduce((acc: number, curr: any) => acc + (2.5 - curr.usage > 0 ? 2.5 - curr.usage : 0), 0);
+        moneySaved = historicalRes.summary.total_cost_inr;
+    } else {
+        console.log("Falling back to simulated chart data.");
+        chartData = generateSimulatedChartData();
+        totalKwhSaved = chartData.reduce((acc: any, curr: any) => acc + Math.max(0, 1.8 - curr.usage), 0);
+        moneySaved = totalKwhSaved * 5.5; // Approximate cost
+    }
+    setEnergyUsage(chartData);
+
+    // Other data can remain client-side simulated for now
+    setOverview({
+      wattsPoints: Math.floor(12500 + Math.random() * 1000),
+      kwhSaved: Number(totalKwhSaved.toFixed(1)),
+      moneySaved: Number(moneySaved.toFixed(2)),
+      questsCompleted: Math.floor(12 + Math.random() * 5),
+    });
+
+    setLoading(false);
   }, []);
 
   const handleScenarioChange = (scenario: SimulationScenario) => {
     setSimulationScenario(scenario);
-    fetchData(scenario); // Fetch immediately on change
-    if (simulationInterval) {
-      clearInterval(simulationInterval);
-    }
-    // Restart interval with new scenario
-    const newInterval = setInterval(() => fetchData(scenario), 10000);
-    setSimulationInterval(newInterval);
+    fetchData(scenario);
   };
 
 
   useEffect(() => {
-    fetchData(); // Initial fetch
+    fetchData(simulationScenario);
     
     // Static data (can be fetched once)
     const generateQuests = (): Quest[] => {
@@ -227,13 +213,9 @@ export const useSimulatedData = () => {
     };
     setBadges(generateBadges());
 
-    const newInterval = setInterval(fetchData, 10000); // Re-fetch every 10 seconds
-    setSimulationInterval(newInterval);
-    return () => {
-      if (newInterval) clearInterval(newInterval);
-      if (simulationInterval) clearInterval(simulationInterval);
-    };
-  }, []);
+    const interval = setInterval(() => fetchData(simulationScenario), 10000);
+    return () => clearInterval(interval);
+  }, [fetchData, simulationScenario]);
 
   return { smartDevices, quests, leaderboard, badges, overview, energyUsage, loading, handleScenarioChange };
 };
