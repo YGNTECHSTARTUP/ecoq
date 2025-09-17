@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import SmartMeterIntegration from '@/components/dashboard/smart-meter-integration';
 import { 
   Zap, 
   Target, 
@@ -27,7 +28,8 @@ import {
   Calendar,
   AlertTriangle,
   Leaf,
-  RefreshCw
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
 
@@ -61,7 +63,7 @@ export default function DashboardPage() {
   useEffect(() => {
     // Set the initial time/date string on client-side to avoid hydration mismatch
     setLastUpdateTime(new Date().toLocaleTimeString());
-    setCurrentDate(new Date().toLocaleDateString('en-GB'));
+    setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric'}));
 
     const updateInterval = setInterval(() => {
       handleRefresh(true);
@@ -71,6 +73,14 @@ export default function DashboardPage() {
       title: "Dashboard Ready! 🚀",
       description: "Real-time environmental quests are now active.",
     });
+
+    // Check for query params to switch tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab) {
+      setState(prev => ({ ...prev, activeTab: tab }));
+    }
+
 
     return () => clearInterval(updateInterval);
   }, []);
@@ -191,7 +201,7 @@ export default function DashboardPage() {
         )}
 
         <Tabs value={state.activeTab} onValueChange={(value) => setState(prev => ({ ...prev, activeTab: value }))}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Overview
@@ -207,6 +217,10 @@ export default function DashboardPage() {
             <TabsTrigger value="community" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Community
+            </TabsTrigger>
+            <TabsTrigger value="controls" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Controls
             </TabsTrigger>
           </TabsList>
 
@@ -313,6 +327,11 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+           <TabsContent value="controls" className="space-y-4">
+              <SmartMeterIntegration />
+          </TabsContent>
+
         </Tabs>
       </main>
     </MainLayout>

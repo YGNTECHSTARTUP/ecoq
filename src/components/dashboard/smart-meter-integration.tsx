@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -14,17 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Zap,
   Activity,
-  TrendingUp,
-  TrendingDown,
   Power,
   Gauge,
   AlertCircle,
-  CheckCircle,
-  Settings,
   RefreshCw,
   Wifi,
   WifiOff,
-  Battery,
   Clock
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -58,7 +52,11 @@ interface RealTimeMetrics {
   timestamp: string;
 }
 
-const SmartMeterIntegration: React.FC = () => {
+interface SmartMeterIntegrationProps {
+    onConnected?: () => void;
+}
+
+const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnected }) => {
   const { toast } = useToast();
   const [state, setState] = useState<SmartMeterState>({
     isConnected: false,
@@ -84,11 +82,10 @@ const SmartMeterIntegration: React.FC = () => {
   });
 
   useEffect(() => {
-    // Auto-connect if credentials are available
     const savedConnection = localStorage.getItem('smartmeter_connection');
     if (savedConnection) {
       const connection = JSON.parse(savedConnection);
-      connectToMeter(connection.providerId, connection.credentials, connection.consumerId);
+      connectToMeter(connection.providerId, connection.credentials, connection.consumerId, true);
     }
   }, []);
 
@@ -96,7 +93,6 @@ const SmartMeterIntegration: React.FC = () => {
     let interval: NodeJS.Timeout;
 
     if (state.isConnected && state.provider?.supportedFeatures.includes('realtime')) {
-      // Fetch real-time data every 30 seconds
       interval = setInterval(() => {
         fetchRealTimeData();
       }, 30000);
@@ -107,7 +103,7 @@ const SmartMeterIntegration: React.FC = () => {
     };
   }, [state.isConnected, state.provider]);
 
-  const connectToMeter = async (providerId?: string, credentials?: any, consumerId?: string) => {
+  const connectToMeter = async (providerId?: string, credentials?: any, consumerId?: string, silent = false) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -119,7 +115,6 @@ const SmartMeterIntegration: React.FC = () => {
         throw new Error('Please select a provider and enter your consumer ID');
       }
 
-      // Auto-detect provider if not specified
       const detectedProviderId = providerToUse || detectProvider(consumerIdToUse, 'Hyderabad');
       const provider = SMART_METER_PROVIDERS.find(p => p.id === detectedProviderId);
 
@@ -128,15 +123,12 @@ const SmartMeterIntegration: React.FC = () => {
       }
 
       const api = new SmartMeterAPI(provider.id, credentialsToUse);
-
-      // Test connection by fetching current reading
       const currentReading = await api.getCurrentReading(consumerIdToUse);
       
-      // Fetch additional data
       const [historicalData, billingInfo] = await Promise.all([
         api.getHistoricalReadings(
           consumerIdToUse,
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 30 days
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           new Date().toISOString().split('T')[0]
         ),
         api.getBillingInfo(consumerIdToUse)
@@ -160,17 +152,22 @@ const SmartMeterIntegration: React.FC = () => {
         credentials: credentialsToUse
       }));
 
-      // Save connection for auto-reconnect
       localStorage.setItem('smartmeter_connection', JSON.stringify({
         providerId: provider.id,
         credentials: credentialsToUse,
         consumerId: consumerIdToUse
       }));
+      
+      if (!silent) {
+        toast({
+            title: 'Connected Successfully! ⚡',
+            description: `Connected to ${provider.name} smart meter.`,
+        });
+      }
 
-      toast({
-        title: 'Connected Successfully! ⚡',
-        description: `Connected to ${provider.name} smart meter.`,
-      });
+      if (onConnected) {
+        onConnected();
+      }
 
     } catch (error: any) {
       setState(prev => ({
@@ -178,12 +175,13 @@ const SmartMeterIntegration: React.FC = () => {
         isLoading: false,
         error: error.message || 'Failed to connect to smart meter'
       }));
-
-      toast({
-        variant: 'destructive',
-        title: 'Connection Failed',
-        description: error.message || 'Could not connect. Please check credentials or try demo.',
-      });
+      if (!silent) {
+          toast({
+            variant: 'destructive',
+            title: 'Connection Failed',
+            description: error.message || 'Could not connect. Please check credentials or try demo.',
+          });
+      }
     }
   };
 
@@ -402,27 +400,26 @@ const SmartMeterIntegration: React.FC = () => {
                 </div>
               )}
 
-              <Button 
-                onClick={() => connectToMeter()} 
-                disabled={state.isLoading || !connectionForm.consumerId || !selectedProvider}
-                className="w-full"
-              >
-                {state.isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                {state.isLoading ? 'Connecting...' : 'Connect to Smart Meter'}
-              </Button>
-
-              <div className="text-center">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
+                    onClick={() => connectToMeter()} 
+                    disabled={state.isLoading || !connectionForm.consumerId || !selectedProvider}
+                    className="flex-1"
+                >
+                    {state.isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                    {state.isLoading ? 'Connecting...' : 'Connect to Smart Meter'}
+                </Button>
+                 <Button 
                   variant="outline" 
                   onClick={() => connectToMeter('genus', {}, 'DEMO123456')}
-                  className="text-sm"
+                  className="flex-1"
                 >
                   Try Demo Connection
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">
+              </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
                   Use demo data to explore features without real credentials.
                 </p>
-              </div>
             </div>
           </CardContent>
         </Card>
