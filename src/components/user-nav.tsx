@@ -1,8 +1,12 @@
 "use client"
 
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, LogOut, User as UserIcon, LogIn } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { signOut } from "firebase/auth"
 
+import { auth } from "@/lib/firebase"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,44 +23,61 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
-import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { Skeleton } from "./ui/skeleton"
 
 export function UserNav() {
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
   const { setTheme } = useTheme()
+  const [user, loading] = useAuthState(auth)
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await signOut(auth)
+    router.push('/')
+  }
+
+  if (loading) {
+    return <Skeleton className="h-9 w-9 rounded-full" />
+  }
+
+  if (!user) {
+    return (
+      <Button variant="outline" onClick={() => router.push('/')}>
+        <LogIn className="mr-2 h-4 w-4" />
+        Login
+      </Button>
+    )
+  }
+
+  const getInitials = (email: string | null) => {
+    if (!email) return 'EQ'
+    return email.substring(0, 2).toUpperCase()
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage 
-              src={userAvatar?.imageUrl} 
-              alt="User avatar" 
-              data-ai-hint={userAvatar?.imageHint}
-            />
-            <AvatarFallback>EQ</AvatarFallback>
+            {user.photoURL && <AvatarImage src={user.photoURL} alt="User avatar" />}
+            <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">EcoWarrior</p>
+            <p className="text-sm font-medium leading-none">Energy Warrior</p>
             <p className="text-xs leading-none text-muted-foreground">
-              ecowarrior@example.com
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            Profile
+          <DropdownMenuItem onClick={() => router.push('/onboarding/profile')}>
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>Profile</span>
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Billing
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem>
             Settings
@@ -85,8 +106,9 @@ export function UserNav() {
           </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          Log out
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
