@@ -24,7 +24,6 @@ import {
   ChevronRight,
   Medal,
   Sparkles,
-  Lightning,
   Timer,
   CheckCircle,
   Lock,
@@ -179,7 +178,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
       case 'daily': return <Calendar className="h-4 w-4" />;
       case 'weekly': return <Clock className="h-4 w-4" />;
       case 'monthly': return <Target className="h-4 w-4" />;
-      case 'challenge': return <Lightning className="h-4 w-4" />;
+      case 'challenge': return <Zap className="h-4 w-4" />;
       case 'community': return <Users className="h-4 w-4" />;
       default: return <Star className="h-4 w-4" />;
     }
