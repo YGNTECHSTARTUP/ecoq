@@ -11,6 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Zap,
   Activity,
   Power,
@@ -19,7 +26,8 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  Clock
+  Clock,
+  MapPin
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -56,6 +64,9 @@ interface SmartMeterIntegrationProps {
     onConnected?: () => void;
 }
 
+const ALL_REGIONS = [...new Set(SMART_METER_PROVIDERS.flatMap(p => p.regions))].sort();
+
+
 const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnected }) => {
   const { toast } = useToast();
   const [state, setState] = useState<SmartMeterState>({
@@ -71,6 +82,7 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
     credentials: {}
   });
 
+  const [selectedArea, setSelectedArea] = useState<string>('');
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [connectionForm, setConnectionForm] = useState({
     consumerId: '',
@@ -81,11 +93,15 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
     clientSecret: ''
   });
 
+  const availableProviders = selectedArea 
+    ? SMART_METER_PROVIDERS.filter(p => p.regions.includes(selectedArea) || p.regions.includes('Pan India'))
+    : [];
+
   useEffect(() => {
     const savedConnection = localStorage.getItem('smartmeter_connection');
     if (savedConnection) {
       const connection = JSON.parse(savedConnection);
-      connectToMeter(connection.providerId, connection.credentials, connection.consumerId, true);
+      connectToMeter(connection.providerId, connection.credentials, connection.consumerId, true, connection.area);
     }
   }, []);
 
@@ -103,23 +119,24 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
     };
   }, [state.isConnected, state.provider]);
 
-  const connectToMeter = async (providerId?: string, credentials?: any, consumerId?: string, silent = false) => {
+  const connectToMeter = async (providerId?: string, credentials?: any, consumerId?: string, silent = false, area?: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const providerToUse = providerId || selectedProvider;
       const credentialsToUse = credentials || connectionForm;
       const consumerIdToUse = consumerId || connectionForm.consumerId;
+      const areaToUse = area || selectedArea;
 
       if (!providerToUse && !consumerIdToUse) {
-        throw new Error('Please select a provider and enter your consumer ID');
+        throw new Error('Please select an area and provider, and enter your consumer ID');
       }
 
-      const detectedProviderId = providerToUse || detectProvider(consumerIdToUse, 'Hyderabad');
+      const detectedProviderId = providerToUse || detectProvider(consumerIdToUse, areaToUse);
       const provider = SMART_METER_PROVIDERS.find(p => p.id === detectedProviderId);
 
       if (!provider) {
-        throw new Error('Provider not supported or could not be detected.');
+        throw new Error('Provider not supported or could not be detected for the selected area.');
       }
 
       const api = new SmartMeterAPI(provider.id, credentialsToUse);
@@ -155,7 +172,8 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
       localStorage.setItem('smartmeter_connection', JSON.stringify({
         providerId: provider.id,
         credentials: credentialsToUse,
-        consumerId: consumerIdToUse
+        consumerId: consumerIdToUse,
+        area: areaToUse,
       }));
       
       if (!silent) {
@@ -296,131 +314,148 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
               </Alert>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {SMART_METER_PROVIDERS.map((provider) => (
-                <Card 
-                  key={provider.id} 
-                  className={`cursor-pointer transition-colors ${
-                    selectedProvider === provider.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
-                  }`}
-                  onClick={() => setSelectedProvider(provider.id)}
-                >
-                  <CardContent className="p-4 text-center">
-                    <div className="text-2xl mb-2">⚡</div>
-                    <h3 className="font-semibold text-sm">{provider.name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {provider.regions[0]}
-                      {provider.regions.length > 1 && ` +${provider.regions.length - 1}`}
-                    </p>
-                    <Badge variant="secondary" className="mt-2 text-xs">
-                      {provider.authType}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-2">
+              <Label htmlFor="area">Area / City</Label>
+              <Select onValueChange={setSelectedArea} value={selectedArea}>
+                <SelectTrigger id="area">
+                  <SelectValue placeholder="Select your city or region" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_REGIONS.map(region => (
+                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="consumerId">Consumer ID</Label>
-                <Input
-                  id="consumerId"
-                  placeholder="e.g., TP123456789"
-                  value={connectionForm.consumerId}
-                  onChange={(e) => setConnectionForm(prev => ({ ...prev, consumerId: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Find this on your electricity bill.
-                </p>
-              </div>
+            {selectedArea && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {availableProviders.map((provider) => (
+                    <Card 
+                      key={provider.id} 
+                      className={`cursor-pointer transition-colors ${
+                        selectedProvider === provider.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => setSelectedProvider(provider.id)}
+                    >
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl mb-2">⚡</div>
+                        <h3 className="font-semibold text-sm">{provider.name}</h3>
+                        <Badge variant="secondary" className="mt-2 text-xs">
+                          {provider.authType}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
 
-              {selectedProvider && (
-                <div className="space-y-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-semibold">{SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.name} Credentials</h4>
-                  {SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType === 'apiKey' && (
-                    <div>
-                      <Label htmlFor="apiKey">API Key</Label>
-                      <Input
-                        id="apiKey"
-                        type="password"
-                        placeholder="Your API key"
-                        value={connectionForm.apiKey}
-                        onChange={(e) => setConnectionForm(prev => ({ ...prev, apiKey: e.target.value }))}
-                      />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="consumerId">Consumer ID</Label>
+                    <Input
+                      id="consumerId"
+                      placeholder="e.g., TP123456789"
+                      value={connectionForm.consumerId}
+                      onChange={(e) => setConnectionForm(prev => ({ ...prev, consumerId: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Find this on your electricity bill.
+                    </p>
+                  </div>
+
+                  {selectedProvider && (
+                    <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+                      <h4 className="font-semibold">{SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.name} Credentials</h4>
+                      {SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType === 'apiKey' && (
+                        <div>
+                          <Label htmlFor="apiKey">API Key</Label>
+                          <Input
+                            id="apiKey"
+                            type="password"
+                            placeholder="Your API key"
+                            value={connectionForm.apiKey}
+                            onChange={(e) => setConnectionForm(prev => ({ ...prev, apiKey: e.target.value }))}
+                          />
+                        </div>
+                      )}
+
+                      {['basic', 'jwt'].includes(SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType || '') && (
+                        <>
+                          <div>
+                            <Label htmlFor="username">Username</Label>
+                            <Input
+                              id="username"
+                              placeholder="Username"
+                              value={connectionForm.username}
+                              onChange={(e) => setConnectionForm(prev => ({ ...prev, username: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                              id="password"
+                              type="password"
+                              placeholder="Password"
+                              value={connectionForm.password}
+                              onChange={(e) => setConnectionForm(prev => ({ ...prev, password: e.target.value }))}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType === 'oauth' && (
+                        <>
+                          <div>
+                            <Label htmlFor="clientId">Client ID</Label>
+                            <Input
+                              id="clientId"
+                              placeholder="OAuth Client ID"
+                              value={connectionForm.clientId}
+                              onChange={(e) => setConnectionForm(prev => ({ ...prev, clientId: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="clientSecret">Client Secret</Label>
+                            <Input
+                              id="clientSecret"
+                              type="password"
+                              placeholder="OAuth Client Secret"
+                              value={connectionForm.clientSecret}
+                              onChange={(e) => setConnectionForm(prev => ({ ...prev, clientSecret: e.target.value }))}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {['basic', 'jwt'].includes(SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType || '') && (
-                    <>
-                      <div>
-                        <Label htmlFor="username">Username</Label>
-                        <Input
-                          id="username"
-                          placeholder="Username"
-                          value={connectionForm.username}
-                          onChange={(e) => setConnectionForm(prev => ({ ...prev, username: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="Password"
-                          value={connectionForm.password}
-                          onChange={(e) => setConnectionForm(prev => ({ ...prev, password: e.target.value }))}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {SMART_METER_PROVIDERS.find(p => p.id === selectedProvider)?.authType === 'oauth' && (
-                    <>
-                      <div>
-                        <Label htmlFor="clientId">Client ID</Label>
-                        <Input
-                          id="clientId"
-                          placeholder="OAuth Client ID"
-                          value={connectionForm.clientId}
-                          onChange={(e) => setConnectionForm(prev => ({ ...prev, clientId: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="clientSecret">Client Secret</Label>
-                        <Input
-                          id="clientSecret"
-                          type="password"
-                          placeholder="OAuth Client Secret"
-                          value={connectionForm.clientSecret}
-                          onChange={(e) => setConnectionForm(prev => ({ ...prev, clientSecret: e.target.value }))}
-                        />
-                      </div>
-                    </>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button 
+                        onClick={() => connectToMeter()} 
+                        disabled={state.isLoading || !connectionForm.consumerId || !selectedProvider}
+                        className="flex-1"
+                    >
+                        {state.isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        {state.isLoading ? 'Connecting...' : 'Connect to Smart Meter'}
+                    </Button>
+                  </div>
                 </div>
-              )}
+              </>
+            )}
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                    onClick={() => connectToMeter()} 
-                    disabled={state.isLoading || !connectionForm.consumerId || !selectedProvider}
-                    className="flex-1"
-                >
-                    {state.isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                    {state.isLoading ? 'Connecting...' : 'Connect to Smart Meter'}
-                </Button>
-                 <Button 
-                  variant="outline" 
-                  onClick={() => connectToMeter('genus', {}, 'DEMO123456')}
-                  className="flex-1"
-                >
-                  Try Demo Connection
-                </Button>
-              </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Use demo data to explore features without real credentials.
-                </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => connectToMeter('genus', {}, 'DEMO123456', false, 'Pan India')}
+                className="flex-1"
+              >
+                Try Demo Connection
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Use demo data to explore features without real credentials.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -746,3 +781,5 @@ const SmartMeterIntegration: React.FC<SmartMeterIntegrationProps> = ({ onConnect
 };
 
 export default SmartMeterIntegration;
+
+    
