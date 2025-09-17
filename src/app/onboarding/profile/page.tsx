@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { User, Home, Loader2, Zap } from 'lucide-react';
+import { User, Home, Loader2, Zap, Upload, Camera } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,11 @@ const steps = [
     description: 'Describe your home for tailored tips.',
     fields: ['homeType', 'homeSize'],
   },
+    {
+    title: 'Profile Picture',
+    description: 'Upload a profile picture.',
+    fields: ['profilePicture'],
+  },
   {
     title: 'Energy Goals',
     description: 'Set your energy saving targets.',
@@ -50,11 +56,25 @@ export default function ProfileOnboardingPage() {
     homeType: '',
     homeSize: '',
     savingGoal: '',
+    profilePicture: '',
   });
+  const [preview, setPreview] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({...prev, [id]: value}));
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({...prev, profilePicture: reader.result as string}));
+        setPreview(reader.result as string);
+      }
+      reader.readAsDataURL(file);
+    }
   }
 
   const handleSelectChange = (id: string) => (value: string) => {
@@ -67,27 +87,32 @@ export default function ProfileOnboardingPage() {
     } else {
       setLoading(true);
       try {
-        const user = await new Promise((resolve, reject) => {
+        const user = await new Promise<any>((resolve, reject) => {
           const unsubscribe = onAuthStateChanged(auth, (user) => {
             unsubscribe();
-            resolve(user);
-          }, reject);
+            if (user) {
+              resolve(user);
+            } else {
+              reject(new Error('You must be logged in to save your profile.'));
+            }
+          });
         });
 
-        if (user) {
-          await setDoc(doc(db, "users", (user as any).uid), {
-            ...formData,
-            email: (user as any).email,
+        await setDoc(doc(db, "users", user.uid), {
+            name: formData.name,
+            householdSize: formData.householdSize,
+            homeType: formData.homeType,
+            homeSize: formData.homeSize,
+            savingGoal: formData.savingGoal,
+            profilePicture: formData.profilePicture,
+            email: user.email,
             createdAt: new Date().toISOString(),
-          });
-          toast({
+        });
+        toast({
             title: 'Profile Saved!',
             description: "Your profile has been created successfully.",
-          });
-          router.push('/onboarding');
-        } else {
-          throw new Error('You must be logged in to save your profile.');
-        }
+        });
+        router.push('/onboarding');
       } catch (error: any) {
         console.error("Error saving profile: ", error);
         toast({
@@ -168,6 +193,24 @@ export default function ProfileOnboardingPage() {
                             </>
                         )}
                         {step === 2 && (
+                            <div className="space-y-4 flex flex-col items-center">
+                                <div className="w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
+                                  {preview ? (
+                                    <Image src={preview} alt="Profile preview" width={128} height={128} className="object-cover h-full w-full" />
+                                  ) : (
+                                    <Camera className="h-12 w-12 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <Input id="profilePicture" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                                <Label htmlFor="profilePicture" className="cursor-pointer">
+                                  <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors h-10 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Photo
+                                  </div>
+                                </Label>
+                            </div>
+                        )}
+                        {step === 3 && (
                             <div className="space-y-2">
                                 <Label htmlFor="savingGoal">Monthly Saving Goal</Label>
                                 <Select onValueChange={handleSelectChange('savingGoal')} value={formData.savingGoal}>
