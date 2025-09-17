@@ -101,75 +101,65 @@ const initializeMockData = () => {
 // Initialize data on startup
 initializeMockData();
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const endpoint = searchParams.get('endpoint');
-  const consumerId = searchParams.get('consumerId');
-  const provider = searchParams.get('provider');
+  
+  if (request.method === 'GET') {
+      const consumerId = searchParams.get('consumerId');
+      const provider = searchParams.get('provider');
 
-  // Simulate authentication delay
-  await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+      // Simulate authentication delay
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
 
-  // Simulate occasional API failures (10% chance)
-  if (Math.random() < 0.1) {
-    return NextResponse.json(
-      { error: 'Service temporarily unavailable', code: 503 },
-      { status: 503 }
-    );
-  }
-
-  // Handle different endpoints
-  switch (endpoint) {
-    case 'auth':
-      return handleAuth(request);
-    
-    case 'current':
-      return handleCurrentReading(consumerId, provider);
-    
-    case 'realtime':
-      return handleRealTimeData(consumerId, provider);
-    
-    case 'history':
-      return handleHistoricalData(consumerId, provider, searchParams);
-    
-    case 'billing':
-      return handleBillingInfo(consumerId, provider);
-    
-    case 'list-meters':
-      return handleListMeters();
-    
-    case 'game-state':
-      return handleGameState(consumerId);
+      // Simulate occasional API failures (10% chance)
+      if (Math.random() < 0.1) {
+        return NextResponse.json(
+          { error: 'Service temporarily unavailable', code: 503 },
+          { status: 503 }
+        );
+      }
       
-    default:
-      return NextResponse.json(
-        { error: 'Invalid endpoint', availableEndpoints: ['auth', 'current', 'realtime', 'history', 'billing', 'list-meters', 'game-state'] },
-        { status: 400 }
-      );
+      switch (endpoint) {
+        case 'current':
+          return handleCurrentReading(consumerId, provider);
+        case 'realtime':
+          return handleRealTimeData(consumerId, provider);
+        case 'history':
+          return handleHistoricalData(consumerId, provider, searchParams);
+        case 'billing':
+          return handleBillingInfo(consumerId, provider);
+        case 'list-meters':
+          return handleListMeters();
+        case 'game-state':
+          return handleGameState(consumerId);
+        default:
+          return NextResponse.json(
+            { error: 'Invalid GET endpoint', availableEndpoints: ['current', 'realtime', 'history', 'billing', 'list-meters', 'game-state'] },
+            { status: 400 }
+          );
+      }
   }
+
+  if (request.method === 'POST') {
+    switch (endpoint) {
+      case 'auth':
+        return handleAuth(request);
+      case 'register-meter':
+        return handleRegisterMeter(request);
+      case 'game-action':
+        return handleGameAction(request);
+      default:
+        return NextResponse.json(
+          { error: 'Invalid POST endpoint' },
+          { status: 400 }
+        );
+    }
+  }
+
+  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
 }
 
-export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const endpoint = searchParams.get('endpoint');
-
-  switch (endpoint) {
-    case 'auth':
-      return handleAuth(request);
-    
-    case 'register-meter':
-      return handleRegisterMeter(request);
-    
-    case 'game-action':
-      return handleGameAction(request);
-      
-    default:
-      return NextResponse.json(
-        { error: 'Invalid POST endpoint' },
-        { status: 400 }
-      );
-  }
-}
 
 async function handleAuth(request: NextRequest) {
   try {
@@ -678,4 +668,4 @@ async function handleGameAction(request: NextRequest) {
   }
 }
 
-    
+export { handler as GET, handler as POST };
