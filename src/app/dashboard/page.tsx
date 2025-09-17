@@ -28,8 +28,6 @@ import {
   Leaf,
   RefreshCw
 } from 'lucide-react';
-
-// Enhanced Real-Time Quest Component
 import EnhancedRealTimeQuests from '@/components/dashboard/enhanced-real-time-quests';
 
 interface DashboardState {
@@ -54,17 +52,14 @@ export default function DashboardPage() {
     notifications: []
   });
 
-  // Mock user location - replace with actual user location service
   const userLocation = { lat: 17.385, lng: 78.4867 }; // Hyderabad
-  const userId = 'demo-user-id'; // Replace with actual auth user ID
+  const userId = 'demo-user-id';
 
   useEffect(() => {
-    // Set up real-time updates
     const updateInterval = setInterval(() => {
-      checkForUpdates();
+      handleRefresh(true);
     }, 300000); // Check every 5 minutes
 
-    // Initial load notification
     toast({
       title: "Dashboard Ready! 🚀",
       description: "Real-time environmental quests are now active.",
@@ -73,15 +68,12 @@ export default function DashboardPage() {
     return () => clearInterval(updateInterval);
   }, [toast]);
 
-  const checkForUpdates = async () => {
+  const handleRefresh = async (silent = false) => {
     if (state.isRefreshing) return;
     
     setState(prev => ({ ...prev, isRefreshing: true }));
     
     try {
-      // This would typically check for new weather conditions, 
-      // urgent quests, community updates, etc.
-      
       // Simulate checking for updates
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -90,23 +82,22 @@ export default function DashboardPage() {
         lastUpdate: new Date(),
         isRefreshing: false
       }));
+
+      if (!silent) {
+        toast({
+          title: "Refreshed! ✨",
+          description: "Dashboard data has been updated.",
+        });
+      }
       
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      console.error('Error refreshing dashboard:', error);
       setState(prev => ({ ...prev, isRefreshing: false }));
     }
   };
 
-  const handleRefresh = async () => {
-    await checkForUpdates();
-    toast({
-      title: "Refreshed! ✨",
-      description: "Dashboard data has been updated.",
-    });
-  };
-
   const handleQuestNotification = (quest: any) => {
-    const notification = {
+    const newNotification = {
       id: quest.id,
       type: 'quest' as const,
       title: 'New Urgent Quest!',
@@ -116,13 +107,13 @@ export default function DashboardPage() {
     
     setState(prev => ({
       ...prev,
-      notifications: [...prev.notifications, notification]
+      notifications: [newNotification, ...prev.notifications]
     }));
     
     toast({
-      variant: notification.urgent ? 'destructive' : 'default',
-      title: notification.title,
-      description: notification.message,
+      variant: newNotification.urgent ? 'destructive' : 'default',
+      title: newNotification.title,
+      description: newNotification.message,
     });
   };
 
@@ -136,7 +127,6 @@ export default function DashboardPage() {
   return (
     <MainLayout>
       <main className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-        {/* Header with Status */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">EcoQuest Dashboard</h2>
@@ -156,7 +146,7 @@ export default function DashboardPage() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={handleRefresh}
+              onClick={() => handleRefresh()}
               disabled={state.isRefreshing}
               className="flex items-center gap-2"
             >
@@ -166,7 +156,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Active Notifications */}
         {state.notifications.length > 0 && (
           <div className="space-y-2">
             {state.notifications.slice(0, 2).map((notification) => (
@@ -189,7 +178,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Main Dashboard Tabs */}
         <Tabs value={state.activeTab} onValueChange={(value) => setState(prev => ({ ...prev, activeTab: value }))}>
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -214,7 +202,6 @@ export default function DashboardPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab - Original Dashboard Layout */}
           <TabsContent value="overview" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <OverviewCards />
@@ -231,7 +218,6 @@ export default function DashboardPage() {
             </div>
           </TabsContent>
 
-          {/* Real-Time Quests Tab - New Enhanced Component */}
           <TabsContent value="realtime" className="space-y-4">
             <Card>
               <CardHeader>
@@ -253,7 +239,6 @@ export default function DashboardPage() {
             </Card>
           </TabsContent>
 
-          {/* Impact Tab */}
           <TabsContent value="impact" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card>
@@ -291,7 +276,6 @@ export default function DashboardPage() {
             <BadgesGallery />
           </TabsContent>
 
-          {/* Community Tab */}
           <TabsContent value="community" className="space-y-4">
             <Leaderboard />
             <Card>
@@ -318,7 +302,6 @@ export default function DashboardPage() {
             </Card>
           </TabsContent>
 
-          {/* Controls Tab */}
           <TabsContent value="controls" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <SmartHomeControls />

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check if OpenWeather API key is available
-    const apiKey = process.env.OPENWEATHER_API_KEY || process.env.REACT_APP_OPENWEATHER_API_KEY;
+    const apiKey = process.env.OPENWEATHER_API_KEY;
     
     if (apiKey) {
       // Try to fetch real weather data
