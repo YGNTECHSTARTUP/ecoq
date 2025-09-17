@@ -67,6 +67,7 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
   const [availableQuests, setAvailableQuests] = useState<Quest[]>([]);
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const userLocation = { lat: 17.385, lng: 78.4867 }; // Hyderabad
 
@@ -86,18 +87,36 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
   }, []);
 
   const initializeGamingData = () => {
-    // Generate quests based on user level
-    const generatedQuests = enhancedQuestSystem.generateQuestsForUser(currentLevel.level, userPoints);
-    setAvailableQuests(generatedQuests.filter(q => q.status === 'available'));
-    setActiveQuests(enhancedQuestSystem.getActiveQuests());
-    setCompletedQuests(enhancedQuestSystem.getCompletedQuests());
-    
-    // Generate leaderboard
-    const globalLeaderboard = enhancedQuestSystem.generateLeaderboard('global');
-    setLeaderboard(globalLeaderboard);
-    
-    // Initialize achievements
-    setAchievements(ACHIEVEMENTS);
+    setIsLoading(true);
+    try {
+      // Generate quests based on user level
+      const generatedQuests = enhancedQuestSystem.generateQuestsForUser(currentLevel.level, userPoints);
+      setAvailableQuests(generatedQuests.filter(q => q.status === 'available'));
+      setActiveQuests(enhancedQuestSystem.getActiveQuests());
+      setCompletedQuests(enhancedQuestSystem.getCompletedQuests());
+      
+      // Generate leaderboard
+      const globalLeaderboard = enhancedQuestSystem.generateLeaderboard('global');
+      setLeaderboard(globalLeaderboard);
+      
+      // Initialize achievements with proper structure
+      const initializedAchievements = ACHIEVEMENTS.map(achievement => ({
+        ...achievement,
+        progress: Math.random() * 100, // Simulate progress
+        unlocked: Math.random() > 0.7  // Some achievements already unlocked
+      }));
+      setAchievements(initializedAchievements);
+    } catch (error) {
+      console.error('Error initializing gaming data:', error);
+      // Fallback initialization
+      setAvailableQuests([]);
+      setActiveQuests([]);
+      setCompletedQuests([]);
+      setLeaderboard(null);
+      setAchievements([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateQuestProgress = () => {
@@ -131,33 +150,53 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
   };
 
   const acceptQuest = (questId: string) => {
-    const success = enhancedQuestSystem.acceptQuest(questId);
-    if (success) {
-      setAvailableQuests(enhancedQuestSystem.getAvailableQuests());
-      setActiveQuests(enhancedQuestSystem.getActiveQuests());
-      toast.success('Quest accepted! Time to save energy!', {
-        description: 'Check your progress in the active quests section.'
-      });
-    } else {
-      toast.error('Failed to accept quest');
+    try {
+      const success = enhancedQuestSystem.acceptQuest(questId);
+      if (success) {
+        // Update quest lists
+        setAvailableQuests(prev => prev.filter(q => q.id !== questId));
+        const acceptedQuest = availableQuests.find(q => q.id === questId);
+        if (acceptedQuest) {
+          acceptedQuest.status = 'active';
+          setActiveQuests(prev => [...prev, acceptedQuest]);
+        }
+        
+        toast.success('🎯 Quest Accepted!', {
+          description: 'Time to save energy and earn points!'
+        });
+      } else {
+        toast.error('Failed to accept quest');
+      }
+    } catch (error) {
+      console.error('Error accepting quest:', error);
+      toast.error('Error accepting quest. Please try again.');
     }
   };
 
   const completeQuest = (questId: string) => {
-    const rewards = enhancedQuestSystem.completeQuest(questId);
-    
-    if (rewards.length > 0) {
-      const pointsReward = rewards.find(r => r.type === 'points');
-      if (pointsReward && typeof pointsReward.value === 'number') {
-        setUserPoints(prev => prev + pointsReward.value as number);
+    try {
+      const rewards = enhancedQuestSystem.completeQuest(questId);
+      
+      if (rewards.length > 0) {
+        const pointsReward = rewards.find(r => r.type === 'points');
+        if (pointsReward && typeof pointsReward.value === 'number') {
+          setUserPoints(prev => prev + pointsReward.value as number);
+        }
+        
+        // Move quest from active to completed
+        const completedQuest = activeQuests.find(q => q.id === questId);
+        if (completedQuest) {
+          completedQuest.status = 'completed';
+          setActiveQuests(prev => prev.filter(q => q.id !== questId));
+          setCompletedQuests(prev => [...prev, completedQuest]);
+        }
+        
+        toast.success('🎉 Quest Completed!', {
+          description: `You earned ${pointsReward?.value || 0} points!`
+        });
       }
-      
-      setActiveQuests(enhancedQuestSystem.getActiveQuests());
-      setCompletedQuests(enhancedQuestSystem.getCompletedQuests());
-      
-      toast.success('🎉 Quest Completed!', {
-        description: `You earned ${pointsReward?.value || 0} points!`
-      });
+    } catch (error) {
+      console.error('Error completing quest:', error);
     }
   };
 
@@ -191,6 +230,18 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
       default: return <Star className="h-4 w-4" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${className}`}>
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-700">Loading EcoQuest Gaming...</h2>
+          <p className="text-gray-500">Initializing your energy adventure!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -404,23 +455,6 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
 
         {/* Quests Tab */}
         <TabsContent value="quests" className="space-y-6">
-           <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-blue-500" />
-                  Live Environmental Quests
-                </CardTitle>
-                <CardDescription>
-                  Dynamic quests based on real-time weather and air quality conditions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EnhancedRealTimeQuests 
-                  userId={userId}
-                  userLocation={userLocation}
-                />
-              </CardContent>
-            </Card>
           <div className="grid gap-6">
             {/* Available Quests */}
             <Card>
@@ -432,44 +466,52 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
                 <CardDescription>New challenges waiting for you</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {availableQuests.map((quest) => (
-                  <div key={quest.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <span className="text-3xl">{quest.icon}</span>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{quest.title}</h3>
-                            <Badge className={getRarityColor(quest.rarity)}>
-                              {quest.rarity}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{quest.description}</p>
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1">
-                              {getQuestTypeIcon(quest.type)}
-                              <span className="text-xs capitalize">{quest.type}</span>
+                {availableQuests.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Target className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">No Available Quests</h3>
+                    <p className="text-sm">Check back later for new energy challenges!</p>
+                  </div>
+                ) : (
+                  availableQuests.map((quest) => (
+                    <div key={quest.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4">
+                          <span className="text-3xl">{quest.icon}</span>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{quest.title}</h3>
+                              <Badge className={getRarityColor(quest.rarity)}>
+                                {quest.rarity}
+                              </Badge>
                             </div>
-                            <Badge size="sm" className={getDifficultyColor(quest.difficulty)}>
-                              {quest.difficulty}
-                            </Badge>
-                            <div className="flex items-center gap-1">
-                              <Sparkles className="h-3 w-3" />
-                              <span className="text-sm font-medium">{quest.baseReward} pts</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Timer className="h-3 w-3" />
-                              <span className="text-xs">{quest.duration}h</span>
+                            <p className="text-sm text-muted-foreground">{quest.description}</p>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1">
+                                {getQuestTypeIcon(quest.type)}
+                                <span className="text-xs capitalize">{quest.type}</span>
+                              </div>
+                              <Badge size="sm" className={getDifficultyColor(quest.difficulty)}>
+                                {quest.difficulty}
+                              </Badge>
+                              <div className="flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                <span className="text-sm font-medium">{quest.baseReward} pts</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Timer className="h-3 w-3" />
+                                <span className="text-xs">{quest.duration}h</span>
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <Button onClick={() => acceptQuest(quest.id)} disabled={isLoading}>
+                          Accept Quest
+                        </Button>
                       </div>
-                      <Button onClick={() => acceptQuest(quest.id)}>
-                        Accept Quest
-                      </Button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -548,7 +590,62 @@ export function GamingDashboard({ userId = 'demo-user', className }: GamingDashb
 
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard" className="space-y-6">
-            <CommunityLeaderboard />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                Global Leaderboard
+              </CardTitle>
+              <CardDescription>Top energy efficiency champions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {leaderboard && (
+                <div className="space-y-3">
+                  {leaderboard.entries.slice(0, 10).map((entry, index) => (
+                    <div 
+                      key={entry.userId} 
+                      className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
+                        index < 3 ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : 'hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          index === 0 ? 'bg-yellow-500 text-white' :
+                          index === 1 ? 'bg-gray-400 text-white' :
+                          index === 2 ? 'bg-amber-600 text-white' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <Avatar>
+                          <AvatarFallback>{entry.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="font-medium">{entry.username}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Level {entry.level} • {entry.questsCompleted} quests completed
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="font-bold text-lg">{entry.totalPoints.toLocaleString()}</div>
+                        <div className="text-sm text-muted-foreground">points</div>
+                      </div>
+                      
+                      {entry.currentStreak > 0 && (
+                        <div className="flex items-center gap-1 text-orange-500">
+                          <Flame className="h-4 w-4" />
+                          <span className="text-sm font-medium">{entry.currentStreak}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Achievements Tab */}
