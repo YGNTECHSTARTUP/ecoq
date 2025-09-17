@@ -119,6 +119,42 @@ export class SmartMeterAPI {
   }
 
   /**
+   * Check if we should use mock API (for development/testing)
+   */
+  private shouldUseMockAPI(): boolean {
+    return process.env.NODE_ENV === 'development' || 
+           process.env.NEXT_PUBLIC_USE_MOCK_SMART_METER === 'true' ||
+           !this.hasValidCredentials();
+  }
+
+  /**
+   * Check if user has provided valid credentials
+   */
+  private hasValidCredentials(): boolean {
+    switch (this.provider.authType) {
+      case 'apiKey':
+        return !!this.credentials.apiKey;
+      case 'basic':
+      case 'jwt':
+        return !!(this.credentials.username && this.credentials.password);
+      case 'oauth':
+        return !!(this.credentials.clientId && this.credentials.clientSecret);
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Get API base URL (mock for testing, real for production)
+   */
+  private getAPIBaseURL(): string {
+    if (this.shouldUseMockAPI()) {
+      return `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/api/mock-smart-meter`;
+    }
+    return this.provider.baseUrl;
+  }
+
+  /**
    * Authenticate with the smart meter provider
    */
   async authenticate(): Promise<string> {
@@ -172,25 +208,39 @@ export class SmartMeterAPI {
    */
   async getCurrentReading(consumerId: string): Promise<SmartMeterReading> {
     try {
-      const token = await this.authenticate();
-      const headers = this.buildHeaders(token);
-      
-      const response = await fetch(
-        `${this.provider.baseUrl}/consumers/${consumerId}/current`,
-        { headers }
-      );
+      if (this.shouldUseMockAPI()) {
+        // Use local test API
+        const response = await fetch(
+          `${this.getAPIBaseURL()}?endpoint=current&consumerId=${consumerId}&provider=${this.provider.id}`
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Mock API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return this.normalizeReading(data, consumerId);
+      } else {
+        // Use real provider API
+        const token = await this.authenticate();
+        const headers = this.buildHeaders(token);
+        
+        const response = await fetch(
+          `${this.provider.baseUrl}/consumers/${consumerId}/current`,
+          { headers }
+        );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return this.normalizeReading(data, consumerId);
       }
-
-      const data = await response.json();
-      return this.normalizeReading(data, consumerId);
-
     } catch (error) {
       console.error(`Failed to get current reading from ${this.provider.name}:`, error);
       
-      // Return mock data for development/demo purposes
+      // Fallback to built-in mock data
       return this.getMockReading(consumerId);
     }
   }
