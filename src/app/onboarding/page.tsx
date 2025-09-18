@@ -1,23 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { MainLayout } from '@/components/main-layout';
-import SmartMeterIntegration from '@/components/dashboard/smart-meter-integration';
+import { OnboardingFlow } from '@/components/onboarding/onboarding-flow';
+import { toast } from 'sonner';
 
 export default function OnboardingPage() {
   const router = useRouter();
 
-  const handleConnected = () => {
-    router.push('/dashboard?tab=controls');
+  const handleOnboardingComplete = (userProfile: any) => {
+    // Save user profile or send to backend
+    console.log('Onboarding completed with profile:', userProfile);
+    
+    toast.success('Welcome to EcoQ! Your setup is complete.');
+    
+    // Redirect to dashboard
+    router.push('/dashboard');
   };
 
   return (
-    <MainLayout>
-        <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
-            <div className="w-full max-w-4xl mx-auto">
-                <SmartMeterIntegration onConnected={handleConnected} />
-            </div>
-        </div>
-    </MainLayout>
+    <OnboardingFlow onComplete={handleOnboardingComplete} />
   );
 }

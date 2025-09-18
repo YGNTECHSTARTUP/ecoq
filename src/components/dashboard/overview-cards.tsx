@@ -1,36 +1,65 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gem, Zap, CheckCircle, Wallet } from 'lucide-react';
-import { useSimulatedData } from '@/hooks/use-simulated-data';
+import { Badge } from '@/components/ui/badge';
+import { Gem, Zap, CheckCircle, Wallet, Activity, Leaf, Plug } from 'lucide-react';
+import { useSmartMeterDashboard } from '@/hooks/use-smart-meter-dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function OverviewCards() {
-  const { overview, loading } = useSimulatedData();
+  const { state } = useSmartMeterDashboard();
+  const { overview, loading, deviceStats, isOnline } = state;
 
   const cards = [
     {
       title: 'Watts Points',
       value: overview.wattsPoints.toLocaleString(),
       icon: Gem,
-      description: 'Total points earned',
+      description: 'Based on smart meter data',
+      extra: (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+          <Activity className="h-3 w-3" />
+          <span>Real-time tracking</span>
+        </div>
+      )
     },
     {
       title: 'kWh Saved',
       value: overview.kwhSaved.toLocaleString(),
       icon: Zap,
-      description: 'This month',
+      description: 'Energy efficiency gains',
+      extra: (
+        <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
+          <Leaf className="h-3 w-3" />
+          <span>{(overview.kwhSaved * 0.82).toFixed(1)} kg CO₂ saved</span>
+        </div>
+      )
     },
     {
       title: 'Money Saved',
       value: `₹${overview.moneySaved.toLocaleString()}`,
       icon: Wallet,
-      description: 'This month',
+      description: 'Potential monthly savings',
+      extra: (
+        <div className="text-xs text-muted-foreground mt-1">
+          From optimized usage patterns
+        </div>
+      )
     },
     {
-      title: 'Quests Completed',
-      value: overview.questsCompleted.toLocaleString(),
-      icon: CheckCircle,
-      description: 'All time',
+      title: 'Connected Devices',
+      value: deviceStats.totalDevices.toLocaleString(),
+      icon: Plug,
+      description: `${deviceStats.activeDevices} active devices`,
+      extra: (
+        <div className="flex items-center gap-2 mt-1">
+          <Badge variant={isOnline ? 'default' : 'destructive'} className="h-4 text-xs">
+            {isOnline ? 'Online' : 'Offline'}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            Efficiency: {deviceStats.averageEfficiencyRating.toFixed(1)}/10
+          </span>
+        </div>
+      )
     },
   ];
 
@@ -49,6 +78,7 @@ export function OverviewCards() {
               <div className="text-2xl font-bold">{card.value}</div>
             )}
             <p className="text-xs text-muted-foreground">{card.description}</p>
+            {card.extra}
           </CardContent>
         </Card>
       ))}

@@ -552,6 +552,13 @@ export class DemoSmartMeterGame {
   }
 
   /**
+   * Get quest validations (public accessor)
+   */
+  getQuestValidations(): Map<string, QuestValidation> {
+    return new Map(this.questValidations);
+  }
+
+  /**
    * Subscribe to state changes
    */
   subscribe(callback: (state: DemoMeterState) => void): () => void {

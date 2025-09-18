@@ -54,8 +54,9 @@ const isPeakHour = (hour?: number) => {
 };
 
 
-async function handler(req: NextRequest, { params }: { params: { slug: string[] }}) {
-    const slug = params.slug.join('/');
+async function handler(req: NextRequest, { params }: { params: Promise<{ slug: string[] }> }) {
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug.join('/');
     const { searchParams } = new URL(req.url);
     const hour = searchParams.has('hour') ? Number(searchParams.get('hour')) : undefined;
 

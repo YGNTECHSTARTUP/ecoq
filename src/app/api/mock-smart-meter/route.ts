@@ -317,7 +317,7 @@ function handleRealTimeData(consumerId: string | null, provider: string | null) 
           .map(appliance => ({ name: appliance.name, powerUsage: appliance.powerRating })),
         totalScore: gameState.gameScore,
         questProgress: gameState.activeQuests.map(questId => {
-          const quest = gameInstance.questValidations.get(questId);
+          const quest = gameInstance.getQuestValidations().get(questId);
           return {
             id: questId,
             title: quest ? `Quest: ${quest.type}` : 'Unknown Quest',
@@ -544,7 +544,7 @@ function handleGameState(consumerId: string | null) {
   const gameInstance = getDemoGameInstance();
   const gameState = gameInstance.getState();
   const activeQuests = gameState.activeQuests.map(questId => {
-    const quest = gameInstance.questValidations.get(questId);
+    const quest = gameInstance.getQuestValidations().get(questId);
     return {
       id: questId,
       title: `Quest: ${quest?.type || 'Unknown'}`,

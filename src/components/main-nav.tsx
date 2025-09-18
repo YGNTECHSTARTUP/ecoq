@@ -8,10 +8,10 @@ import { LayoutDashboard, Target, Trophy, Users, Home } from 'lucide-react';
 
 export const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '#', icon: Target, label: 'Quests' },
-    { href: '#', icon: Trophy, label: 'Leaders' },
-    { href: '#', icon: Home, label: 'Home' },
-    { href: '#', icon: Users, label: 'Community' },
+    { href: '/dashboard?tab=smart-home', icon: Home, label: 'Smart Home' },
+    { href: '/dashboard?tab=analytics', icon: Target, label: 'Analytics' },
+    { href: '/dashboard?tab=community', icon: Users, label: 'Community' },
+    { href: '/dashboard?tab=gaming', icon: Trophy, label: 'Gaming' },
 ];
 
 export function MainNav({ isTooltip = false }: { isTooltip?: boolean }) {

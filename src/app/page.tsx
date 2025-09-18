@@ -39,7 +39,7 @@ export default function SignInPage() {
             title: 'Success!',
             description: "You've been signed in.",
         });
-        router.push('/onboarding/profile');
+        router.push('/onboarding');
     } catch (error: any) {
         console.error('Sign in error:', error);
         toast({
